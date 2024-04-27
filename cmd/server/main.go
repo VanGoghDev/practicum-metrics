@@ -2,6 +2,9 @@ package main
 
 import (
 	"net/http"
+
+	"github.com/VanGoghDev/practicum-metrics/internal/server/handlers/update"
+	memStorage "github.com/VanGoghDev/practicum-metrics/internal/storage/memstorage"
 )
 
 func main() {
@@ -10,27 +13,17 @@ func main() {
 	// logger
 
 	// storage
+	s, err := memStorage.New()
+	if err != nil {
+		panic("Failed to init storage")
+	}
 
 	// router
 	mux := setupMux()
-	mux.HandleFunc(`/`, testHandler)
-	mux.HandleFunc(`/update/`, updateHandler)
 
-	http.ListenAndServe(`:8333`, mux)
-}
+	mux.HandleFunc(`/update/`, update.New(&s))
 
-func testHandler(res http.ResponseWriter, req *http.Request) {
-	res.Write([]byte("Hello"))
-}
-
-func updateHandler(res http.ResponseWriter, req *http.Request) {
-	if req.Method != http.MethodPost {
-		http.Error(res, "Only POST requests are allowed.", http.StatusMethodNotAllowed)
-		return
-	}
-
-	// p := strings.Split(req.URL.Path, "/")
-
+	http.ListenAndServe(`:8080`, mux)
 }
 
 func setupMux() *http.ServeMux {
