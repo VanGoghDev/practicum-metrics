@@ -25,12 +25,12 @@ func New(storage MetricsSaver) http.HandlerFunc {
 		}
 
 		p := strings.Split(r.URL.Path, "/")
-		if len(p) < 4 {
-			http.Error(w, "Invalid url", http.StatusBadRequest)
+		if len(p) < 5 {
+			http.Error(w, "Invalid url", http.StatusNotFound)
 			return
 		}
 
-		//    1          2           3                4
+		//    1          2            3                4
 		// update/<ТИП_МЕТРИКИ>/<ИМЯ_МЕТРИКИ>/<ЗНАЧЕНИЕ_МЕТРИКИ>
 		mType := p[2]
 		mName := p[3]
