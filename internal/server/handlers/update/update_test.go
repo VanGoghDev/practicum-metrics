@@ -6,18 +6,10 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/VanGoghDev/practicum-metrics/internal/server/handlers/update/mocks"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
-
-type MemStorageMock struct{}
-
-func (s *MemStorageMock) SaveGauge(name string, value float64) (err error) {
-	return nil
-}
-
-func (s *MemStorageMock) SaveCount(name string, value int64) (err error) {
-	return nil
-}
 
 func TestUpdateHandler(t *testing.T) {
 	type want struct {
@@ -76,12 +68,15 @@ func TestUpdateHandler(t *testing.T) {
 			request := httptest.NewRequest(http.MethodPost, fmt.Sprintf("/update/%v", tt.request), nil)
 			w := httptest.NewRecorder()
 
-			UpdateHandler(&MemStorageMock{})(w, request)
+			UpdateHandler(&mocks.MemStorageMock{})(w, request)
 
 			result := w.Result()
 
 			assert.Equal(t, tt.want.statusCode, result.StatusCode)
 			assert.Equal(t, tt.want.contentType, result.Header.Get("Content-Type"))
+
+			err := result.Body.Close()
+			require.NoError(t, err)
 		})
 	}
 }
