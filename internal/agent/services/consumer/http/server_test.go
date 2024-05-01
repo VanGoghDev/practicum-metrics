@@ -155,7 +155,7 @@ func TestSendRuntimeGauge(t *testing.T) {
 	tests := []struct {
 		name         string
 		args         args
-		mockHttpFunc httpMock.GetDoFuncType
+		mockHTTPFunc httpMock.GetDoFuncType
 		err          error
 	}{
 		{
@@ -164,7 +164,7 @@ func TestSendRuntimeGauge(t *testing.T) {
 				name:  "test",
 				value: 3.1415,
 			},
-			mockHttpFunc: func(*http.Request) (*http.Response, error) {
+			mockHTTPFunc: func(*http.Request) (*http.Response, error) {
 				return &http.Response{
 					StatusCode: 200,
 					Body:       io.NopCloser(bytes.NewReader([]byte(""))),
@@ -178,7 +178,7 @@ func TestSendRuntimeGauge(t *testing.T) {
 				name:  "",
 				value: 3.1415,
 			},
-			mockHttpFunc: func(*http.Request) (*http.Response, error) {
+			mockHTTPFunc: func(*http.Request) (*http.Response, error) {
 				return &http.Response{
 					StatusCode: 200,
 					Body:       io.NopCloser(bytes.NewReader([]byte(""))),
@@ -192,7 +192,7 @@ func TestSendRuntimeGauge(t *testing.T) {
 				name:  "test",
 				value: -31.3300412,
 			},
-			mockHttpFunc: func(*http.Request) (*http.Response, error) {
+			mockHTTPFunc: func(*http.Request) (*http.Response, error) {
 				return &http.Response{
 					StatusCode: 200,
 					Body:       io.NopCloser(bytes.NewReader([]byte(""))),
