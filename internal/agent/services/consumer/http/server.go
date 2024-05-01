@@ -7,8 +7,8 @@ import (
 )
 
 var (
-	ErrNameIsEmpty      = errors.New("Name is empty")
-	ErrValueIsIncorrect = errors.New("Value is incorrect")
+	ErrNameIsEmpty      = errors.New("name is empty")
+	ErrValueIsIncorrect = errors.New("value is incorrect")
 )
 
 type HTTPClient interface {
@@ -40,7 +40,11 @@ func (s *ServerConsumer) SendRuntimeGauge() error {
 		if err != nil {
 			return err
 		}
-		_, err = s.client.Do(request)
+		resp, err := s.client.Do(request)
+		if err != nil {
+			return err
+		}
+		defer resp.Body.Close()
 		//_, err := http.Post(fmt.Sprintf("http://localhost:8080/update/gauge/%v/%v", k, v), "text/plain", nil)
 		if err != nil {
 			return err
@@ -61,7 +65,11 @@ func (s *ServerConsumer) SendCounter(name string, value int64) error {
 	if err != nil {
 		return err
 	}
-	_, err = s.client.Do(request)
+	resp, err := s.client.Do(request)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
 	if err != nil {
 		return err
 	}
@@ -80,7 +88,11 @@ func (s *ServerConsumer) SendGauge(name string, value float64) error {
 	if err != nil {
 		return err
 	}
-	_, err = s.client.Do(request)
+	resp, err := s.client.Do(request)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
 	if err != nil {
 		return err
 	}
