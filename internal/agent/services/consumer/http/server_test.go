@@ -202,7 +202,7 @@ func TestSendRuntimeGauge(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
-		httpMock.GetDoFunc = tt.mockHttpFunc
+		httpMock.GetDoFunc = tt.mockHTTPFunc
 		t.Run(tt.name, func(t *testing.T) {
 			metricsProviderMock := mocks.MetricsProviderMock{}
 			s := &ServerConsumer{
