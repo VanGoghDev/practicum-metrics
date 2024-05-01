@@ -87,7 +87,7 @@ func TestSendCounter(t *testing.T) {
 	tests := []struct {
 		name         string
 		args         args
-		mockHttpFunc httpMock.GetDoFuncType
+		mockHTTPFunc httpMock.GetDoFuncType
 		err          error
 	}{
 		{
@@ -96,7 +96,7 @@ func TestSendCounter(t *testing.T) {
 				name:  "test",
 				value: 3,
 			},
-			mockHttpFunc: func(*http.Request) (*http.Response, error) {
+			mockHTTPFunc: func(*http.Request) (*http.Response, error) {
 				return &http.Response{
 					StatusCode: 200,
 					Body:       io.NopCloser(bytes.NewReader([]byte(""))),
@@ -110,7 +110,7 @@ func TestSendCounter(t *testing.T) {
 				name:  "",
 				value: 3,
 			},
-			mockHttpFunc: func(*http.Request) (*http.Response, error) {
+			mockHTTPFunc: func(*http.Request) (*http.Response, error) {
 				return &http.Response{
 					StatusCode: 200,
 					Body:       io.NopCloser(bytes.NewReader([]byte(""))),
@@ -124,7 +124,7 @@ func TestSendCounter(t *testing.T) {
 				name:  "test",
 				value: -31,
 			},
-			mockHttpFunc: func(*http.Request) (*http.Response, error) {
+			mockHTTPFunc: func(*http.Request) (*http.Response, error) {
 				return &http.Response{
 					StatusCode: 200,
 					Body:       io.NopCloser(bytes.NewReader([]byte(""))),
@@ -134,7 +134,7 @@ func TestSendCounter(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
-		httpMock.GetDoFunc = tt.mockHttpFunc
+		httpMock.GetDoFunc = tt.mockHTTPFunc
 		t.Run(tt.name, func(t *testing.T) {
 			metricsProviderMock := mocks.MetricsProviderMock{}
 			s := &ServerConsumer{
