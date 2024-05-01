@@ -21,7 +21,7 @@ func main() {
 	// router
 	mux := setupMux()
 
-	mux.HandleFunc(`/update/`, update.New(&s))
+	mux.HandleFunc(`/update/`, update.UpdateHandler(&s))
 
 	http.ListenAndServe(`:8080`, mux)
 }

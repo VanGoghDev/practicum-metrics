@@ -1,7 +1,13 @@
 package memstorage
 
 import (
+	"errors"
 	"fmt"
+)
+
+var (
+	ErrGaugesTableNil   = errors.New("gauges table is not initialized")
+	ErrCountersTableNil = errors.New("counter table is not initialized")
 )
 
 type MemStorage struct {
@@ -20,16 +26,17 @@ func New() (MemStorage, error) {
 
 func (s *MemStorage) SaveGauge(name string, value float64) (err error) {
 	if s == nil || s.Gauges == nil {
-		return fmt.Errorf("gauges table is not initialized")
+		return ErrGaugesTableNil
 	}
 
 	s.Gauges[name] = value
+	fmt.Printf("%v %v /n", name, value)
 	return nil
 }
 
 func (s *MemStorage) SaveCount(name string, value int64) (err error) {
 	if s == nil || s.Counters == nil {
-		return fmt.Errorf("counters table is not initialized")
+		return ErrCountersTableNil
 	}
 
 	if _, ok := s.Counters[name]; ok {

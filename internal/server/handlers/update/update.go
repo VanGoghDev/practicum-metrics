@@ -17,7 +17,7 @@ const (
 	counter string = "counter"
 )
 
-func New(storage MetricsSaver) http.HandlerFunc {
+func UpdateHandler(storage MetricsSaver) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {
 			http.Error(w, "Only POST requests are allowed.", http.StatusMethodNotAllowed)
@@ -70,5 +70,6 @@ func New(storage MetricsSaver) http.HandlerFunc {
 				http.Error(w, "Invalid metric value", http.StatusBadRequest)
 			}
 		}
+		w.Header().Add("Content-Type", "text/plain; charset=utf-8")
 	}
 }
