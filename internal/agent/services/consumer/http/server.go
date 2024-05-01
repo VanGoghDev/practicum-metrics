@@ -46,9 +46,6 @@ func (s *ServerConsumer) SendRuntimeGauge() error {
 		}
 		defer resp.Body.Close()
 		//_, err := http.Post(fmt.Sprintf("http://localhost:8080/update/gauge/%v/%v", k, v), "text/plain", nil)
-		if err != nil {
-			return err
-		}
 	}
 
 	return nil
@@ -70,9 +67,6 @@ func (s *ServerConsumer) SendCounter(name string, value int64) error {
 		return err
 	}
 	defer resp.Body.Close()
-	if err != nil {
-		return err
-	}
 
 	return nil
 }
@@ -93,8 +87,6 @@ func (s *ServerConsumer) SendGauge(name string, value float64) error {
 		return err
 	}
 	defer resp.Body.Close()
-	if err != nil {
-		return err
-	}
+
 	return nil
 }
