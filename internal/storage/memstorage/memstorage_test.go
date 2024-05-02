@@ -19,6 +19,117 @@ type want struct {
 	metricValue float64
 }
 
+func TestGauge(t *testing.T) {
+	tests := []struct {
+		name   string
+		fields fields
+		args   args
+		want   want
+	}{
+		{
+			name: "get existing gauge",
+			fields: fields{
+				Gauges: map[string]float64{
+					"test": 10,
+				},
+				Counters: map[string]int64{},
+			},
+			args: args{
+				name: "test",
+			},
+			want: want{
+				err:         nil,
+				metricValue: 10,
+			},
+		},
+		{
+			name: "get non existing gauge",
+			fields: fields{
+				Gauges: map[string]float64{},
+				Counters: map[string]int64{
+					"test": 10,
+				},
+			},
+			args: args{
+				name: "test",
+			},
+			want: want{
+				err: ErrNotFound,
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			s := &MemStorage{
+				GaugesM:   tt.fields.Gauges,
+				CountersM: tt.fields.Counters,
+			}
+			gauge, err := s.Gauge(tt.args.name)
+			assert.Equal(t, tt.want.err, err)
+			assert.Equal(t, tt.want.metricValue, gauge.Value)
+		})
+	}
+}
+
+func TestCounter(t *testing.T) {
+	type args struct {
+		name string
+	}
+	type want struct {
+		err         error
+		metricValue int64
+	}
+	tests := []struct {
+		name   string
+		fields fields
+		args   args
+		want   want
+	}{
+		{
+			name: "get existing counter",
+			fields: fields{
+				Gauges: map[string]float64{},
+				Counters: map[string]int64{
+					"test": 10,
+				},
+			},
+			args: args{
+				name: "test",
+			},
+			want: want{
+				err:         nil,
+				metricValue: 10,
+			},
+		},
+		{
+			name: "get non existing gauge",
+			fields: fields{
+				Gauges:   map[string]float64{},
+				Counters: map[string]int64{},
+			},
+			args: args{
+				name: "test",
+			},
+			want: want{
+				err: ErrNotFound,
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			s := &MemStorage{
+				GaugesM:   tt.fields.Gauges,
+				CountersM: tt.fields.Counters,
+			}
+			counter, err := s.Counter(tt.args.name)
+			assert.Equal(t, tt.want.err, err)
+			assert.Equal(t, tt.want.metricValue, counter.Value)
+		})
+	}
+}
+
 func TestSaveCount(t *testing.T) {
 	type args struct {
 		name  string
