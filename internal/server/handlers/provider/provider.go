@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strconv"
 
 	"github.com/VanGoghDev/practicum-metrics/internal/domain/models"
 	"github.com/VanGoghDev/practicum-metrics/internal/server/handlers"
@@ -83,7 +84,7 @@ func MetricHandler(s MetricsProvider) http.HandlerFunc {
 					}
 					http.Error(w, "Internal error", http.StatusInternalServerError)
 				}
-				io.WriteString(w, fmt.Sprintf("%f", gauge.Value))
+				io.WriteString(w, strconv.FormatFloat(gauge.Value, 'f', -1, 64))
 			}
 		}
 	}
