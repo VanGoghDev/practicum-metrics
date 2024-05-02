@@ -3,7 +3,7 @@ package main
 import (
 	"net/http"
 
-	"github.com/VanGoghDev/practicum-metrics/internal/server/handlers/update"
+	"github.com/VanGoghDev/practicum-metrics/internal/server/routers/chirouter"
 	memStorage "github.com/VanGoghDev/practicum-metrics/internal/storage/memstorage"
 )
 
@@ -19,14 +19,7 @@ func main() {
 	}
 
 	// router
-	mux := setupMux()
+	router := chirouter.BuildRouter(&s, &s)
 
-	mux.HandleFunc(`/update/`, update.UpdateHandler(&s))
-
-	http.ListenAndServe(`:8080`, mux)
-}
-
-func setupMux() *http.ServeMux {
-	mux := http.NewServeMux()
-	return mux
+	http.ListenAndServe(`:8080`, router)
 }

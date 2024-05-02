@@ -82,12 +82,12 @@ func TestSaveCount(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			s := &MemStorage{
-				Gauges:   tt.fields.Gauges,
-				Counters: tt.fields.Counters,
+				GaugesM:   tt.fields.Gauges,
+				CountersM: tt.fields.Counters,
 			}
 			err := s.SaveCount(tt.args.name, tt.args.value)
 			assert.Equal(t, tt.want.err, err)
-			assert.Equal(t, tt.want.metricValue, s.Counters[tt.args.name])
+			assert.Equal(t, tt.want.metricValue, s.CountersM[tt.args.name])
 		})
 	}
 }
@@ -148,12 +148,12 @@ func TestSaveGauge(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			s := &MemStorage{
-				Gauges:   tt.fields.Gauges,
-				Counters: tt.fields.Counters,
+				GaugesM:   tt.fields.Gauges,
+				CountersM: tt.fields.Counters,
 			}
 			err := s.SaveGauge(tt.args.name, tt.args.value)
 			assert.Equal(t, tt.want.err, err)
-			assert.Equal(t, tt.want.metricValue, s.Gauges[tt.args.name])
+			assert.Equal(t, tt.want.metricValue, s.GaugesM[tt.args.name])
 		})
 	}
 }

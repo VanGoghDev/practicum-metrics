@@ -6,9 +6,10 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/VanGoghDev/practicum-metrics/internal/server/handlers/update/mocks"
+	"github.com/VanGoghDev/practicum-metrics/internal/server/handlers/mocks"
+	"github.com/go-chi/chi"
+	"github.com/go-resty/resty/v2"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 func TestUpdateHandler(t *testing.T) {
@@ -19,11 +20,17 @@ func TestUpdateHandler(t *testing.T) {
 	tests := []struct {
 		name    string
 		request string
+		params  map[string]string
 		want    want
 	}{
 		{
 			name:    "Valid request",
-			request: "gauge/test/1",
+			request: "update/{type}/{name}/{value}",
+			params: map[string]string{
+				"type":  "gauge",
+				"name":  "test",
+				"value": "1",
+			},
 			want: want{
 				contentType: "text/plain; charset=utf-8",
 				statusCode:  200,
@@ -31,7 +38,12 @@ func TestUpdateHandler(t *testing.T) {
 		},
 		{
 			name:    "Invalid metric name",
-			request: "gauge//1",
+			request: "update/{type}/{name}/{value}",
+			params: map[string]string{
+				"type":  "gauge",
+				"name":  "",
+				"value": "1",
+			},
 			want: want{
 				contentType: "text/plain; charset=utf-8",
 				statusCode:  http.StatusNotFound,
@@ -39,7 +51,12 @@ func TestUpdateHandler(t *testing.T) {
 		},
 		{
 			name:    "Invalid metric type",
-			request: "guage/test/1",
+			request: "update/{type}/{name}/{value}",
+			params: map[string]string{
+				"type":  "guage",
+				"name":  "test",
+				"value": "1",
+			},
 			want: want{
 				contentType: "text/plain; charset=utf-8",
 				statusCode:  http.StatusBadRequest,
@@ -47,7 +64,12 @@ func TestUpdateHandler(t *testing.T) {
 		},
 		{
 			name:    "Invalid metric value",
-			request: "gauge/test/",
+			request: "update/{type}/{name}/{value}",
+			params: map[string]string{
+				"type":  "gauge",
+				"name":  "test",
+				"value": "ss",
+			},
 			want: want{
 				contentType: "text/plain; charset=utf-8",
 				statusCode:  http.StatusBadRequest,
@@ -55,28 +77,36 @@ func TestUpdateHandler(t *testing.T) {
 		},
 		{
 			name:    "Invalid url path",
-			request: "/",
+			request: "update/{type}",
+			params: map[string]string{
+				"type":  "gauge",
+				"name":  "",
+				"value": "1",
+			},
 			want: want{
 				contentType: "text/plain; charset=utf-8",
 				statusCode:  http.StatusNotFound,
 			},
 		},
 	}
+	r := chi.NewRouter()
+	r.HandleFunc(`/update/{type}/{name}/{value}`, UpdateHandler(&mocks.MemStorageMock{}))
+	srv := httptest.NewServer(r)
+	defer srv.Close()
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			request := httptest.NewRequest(http.MethodPost, fmt.Sprintf("/update/%v", tt.request), nil)
-			w := httptest.NewRecorder()
+			req := resty.New().R().SetPathParams(tt.params)
+			req.Method = http.MethodPost
+			req.URL = fmt.Sprintf("%s/%s", srv.URL, "update/{type}/{name}/{value}")
+			resp, err := req.Send()
 
-			UpdateHandler(&mocks.MemStorageMock{})(w, request)
+			assert.Empty(t, err)
+			assert.Equal(t, tt.want.statusCode, resp.StatusCode())
+			assert.Equal(t, tt.want.contentType, resp.Header().Get("Content-Type"))
 
-			result := w.Result()
-
-			assert.Equal(t, tt.want.statusCode, result.StatusCode)
-			assert.Equal(t, tt.want.contentType, result.Header.Get("Content-Type"))
-
-			err := result.Body.Close()
-			require.NoError(t, err)
+			// err := resp.Body.Close()
+			// require.NoError(t, err)
 		})
 	}
 }

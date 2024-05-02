@@ -4,7 +4,9 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
-	"strings"
+
+	"github.com/VanGoghDev/practicum-metrics/internal/server/handlers"
+	"github.com/go-chi/chi"
 )
 
 type MetricsSaver interface {
@@ -12,31 +14,14 @@ type MetricsSaver interface {
 	SaveCount(name string, value int64) (err error)
 }
 
-const (
-	gauge   string = "gauge"
-	counter string = "counter"
-)
-
 func UpdateHandler(storage MetricsSaver) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodPost {
-			http.Error(w, "Only POST requests are allowed.", http.StatusMethodNotAllowed)
-			return
-		}
-
-		p := strings.Split(r.URL.Path, "/")
-		if len(p) < 5 {
-			http.Error(w, "Invalid url", http.StatusNotFound)
-			return
-		}
-
-		//    1          2            3                4
 		// update/<ТИП_МЕТРИКИ>/<ИМЯ_МЕТРИКИ>/<ЗНАЧЕНИЕ_МЕТРИКИ>
-		mType := p[2]
-		mName := p[3]
-		mVal := p[4]
+		mType := chi.URLParam(r, "type")
+		mName := chi.URLParam(r, "name")
+		mVal := chi.URLParam(r, "value")
 
-		if mType == "" || (mType != gauge && mType != counter) {
+		if mType == "" || (mType != handlers.Gauge && mType != handlers.Counter) {
 			http.Error(w, "Invalid metric type", http.StatusBadRequest)
 			return
 		}
@@ -47,7 +32,7 @@ func UpdateHandler(storage MetricsSaver) http.HandlerFunc {
 		}
 
 		fmt.Println(mType)
-		if mType == gauge {
+		if mType == handlers.Gauge {
 			if val, err := strconv.ParseFloat(mVal, 64); err == nil {
 				err := storage.SaveGauge(mName, val)
 				if err != nil {
@@ -59,7 +44,7 @@ func UpdateHandler(storage MetricsSaver) http.HandlerFunc {
 			}
 		}
 
-		if mType == counter {
+		if mType == handlers.Counter {
 			if val, err := strconv.ParseInt(mVal, 0, 64); err == nil {
 				err := storage.SaveCount(mName, val)
 				if err != nil {
