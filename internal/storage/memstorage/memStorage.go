@@ -88,11 +88,15 @@ func (s *MemStorage) Gauge(name string) (gauge models.Gauge, err error) {
 		return models.Gauge{}, ErrNotFound
 	}
 
-	gauge = models.Gauge{
-		Name:  name,
-		Value: s.GaugesM[name],
+	if v, ok := s.GaugesM[name]; !ok {
+		return models.Gauge{}, ErrNotFound
+	} else {
+		gauge = models.Gauge{
+			Name:  name,
+			Value: v,
+		}
+		return
 	}
-	return
 }
 
 func (s *MemStorage) Counter(name string) (counter models.Counter, err error) {
@@ -104,9 +108,13 @@ func (s *MemStorage) Counter(name string) (counter models.Counter, err error) {
 		return models.Counter{}, ErrNotFound
 	}
 
-	counter = models.Counter{
-		Name:  name,
-		Value: s.CountersM[name],
+	if v, ok := s.CountersM[name]; !ok {
+		return models.Counter{}, ErrNotFound
+	} else {
+		counter = models.Counter{
+			Name:  name,
+			Value: v,
+		}
+		return
 	}
-	return
 }

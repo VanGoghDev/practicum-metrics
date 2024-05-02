@@ -1,12 +1,14 @@
 package provider
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
 
 	"github.com/VanGoghDev/practicum-metrics/internal/domain/models"
 	"github.com/VanGoghDev/practicum-metrics/internal/server/handlers"
+	"github.com/VanGoghDev/practicum-metrics/internal/storage/memstorage"
 	"github.com/go-chi/chi"
 )
 
@@ -62,6 +64,10 @@ func MetricHandler(s MetricsProvider) http.HandlerFunc {
 			{
 				counter, err := s.Counter(mName)
 				if err != nil {
+					if errors.Is(err, memstorage.ErrNotFound) {
+						http.Error(w, "Not found", http.StatusNotFound)
+						return
+					}
 					http.Error(w, "Internal error", http.StatusInternalServerError)
 				}
 				io.WriteString(w, fmt.Sprintf("%d", counter.Value))
@@ -71,6 +77,10 @@ func MetricHandler(s MetricsProvider) http.HandlerFunc {
 			{
 				gauge, err := s.Gauge(mName)
 				if err != nil {
+					if errors.Is(err, memstorage.ErrNotFound) {
+						http.Error(w, "Not found", http.StatusNotFound)
+						return
+					}
 					http.Error(w, "Internal error", http.StatusInternalServerError)
 				}
 				io.WriteString(w, fmt.Sprintf("%f", gauge.Value))
