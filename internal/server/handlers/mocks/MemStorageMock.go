@@ -5,7 +5,8 @@ import (
 )
 
 type MemStorageMock struct {
-	GaugesM map[string]float64
+	GaugesM   map[string]float64
+	CountersM map[string]int64
 }
 
 func (s *MemStorageMock) SaveGauge(name string, value float64) (err error) {
@@ -32,5 +33,8 @@ func (s *MemStorageMock) Gauge(name string) (gauge models.Gauge, err error) {
 }
 
 func (s *MemStorageMock) Counter(name string) (counter models.Counter, err error) {
-	return models.Counter{}, nil
+	return models.Counter{
+		Name:  name,
+		Value: s.CountersM[name],
+	}, nil
 }
