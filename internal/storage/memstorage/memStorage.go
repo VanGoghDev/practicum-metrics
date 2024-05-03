@@ -2,7 +2,6 @@ package memstorage
 
 import (
 	"errors"
-	"fmt"
 
 	"github.com/VanGoghDev/practicum-metrics/internal/domain/models"
 )
@@ -33,7 +32,6 @@ func (s *MemStorage) SaveGauge(name string, value float64) (err error) {
 	}
 
 	s.GaugesM[name] = value
-	fmt.Printf("%v %v /n", name, value)
 	return nil
 }
 

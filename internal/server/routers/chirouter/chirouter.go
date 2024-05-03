@@ -21,7 +21,5 @@ func BuildRouter(s update.MetricsSaver, p provider.MetricsProvider) chi.Router {
 		r.Post("/{type}/{name}/{value}", update.UpdateHandler(s))
 	})
 
-	// r.HandleFunc(`/update/{type}/{name}/{value}`, update.UpdateHandler(s))
-
 	return r
 }

@@ -1,7 +1,6 @@
 package update
 
 import (
-	"fmt"
 	"net/http"
 	"strconv"
 
@@ -31,7 +30,6 @@ func UpdateHandler(storage MetricsSaver) http.HandlerFunc {
 			return
 		}
 
-		fmt.Println(mType)
 		if mType == handlers.Gauge {
 			if val, err := strconv.ParseFloat(mVal, 64); err == nil {
 				err := storage.SaveGauge(mName, val)
