@@ -19,17 +19,23 @@ var (
 type App struct {
 	Consumer        *server.ServerConsumer
 	MetricsProvider *metrics.MetricsProvider
+
+	reportInterval time.Duration
+	pollInterval   time.Duration
 }
 
-func New() *App {
+func New(consumerAddress string, reportInterval, pollInterval time.Duration) *App {
 	// metrics service
 	metricsService := metrics.New()
-
-	consumer := server.New(metricsService, &http.Client{})
+	fmt.Println(reportInterval)
+	fmt.Println(pollInterval)
+	consumer := server.New(metricsService, &http.Client{}, consumerAddress)
 
 	return &App{
 		Consumer:        consumer,
 		MetricsProvider: metricsService,
+		reportInterval:  reportInterval,
+		pollInterval:    pollInterval,
 	}
 }
 
@@ -71,7 +77,7 @@ func (a *App) Run() error {
 			}
 		}
 
-		time.Sleep(2 * time.Second)
+		time.Sleep(a.pollInterval * time.Second)
 	}
 }
 

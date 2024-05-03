@@ -22,12 +22,14 @@ type MetricsProvider interface {
 type ServerConsumer struct {
 	metricsProvider MetricsProvider
 	client          HTTPClient
+	url             string
 }
 
-func New(metricsProvider MetricsProvider, client HTTPClient) *ServerConsumer {
+func New(metricsProvider MetricsProvider, client HTTPClient, url string) *ServerConsumer {
 	return &ServerConsumer{
 		metricsProvider: metricsProvider,
 		client:          client,
+		url:             url,
 	}
 }
 
@@ -36,7 +38,7 @@ func (s *ServerConsumer) SendRuntimeGauge() error {
 	metrics := s.metricsProvider.ReadMetrics()
 
 	for k, v := range *metrics {
-		request, err := http.NewRequest(http.MethodPost, fmt.Sprintf("http://localhost:8080/update/gauge/%v/%v", k, v), nil)
+		request, err := http.NewRequest(http.MethodPost, fmt.Sprintf("http://%s/update/gauge/%v/%v", s.url, k, v), nil)
 		if err != nil {
 			return err
 		}
@@ -58,7 +60,7 @@ func (s *ServerConsumer) SendCounter(name string, value int64) error {
 	if value < 0 {
 		return ErrValueIsIncorrect
 	}
-	request, err := http.NewRequest(http.MethodPost, fmt.Sprintf("http://localhost:8080/update/counter/%v/%v", name, value), nil)
+	request, err := http.NewRequest(http.MethodPost, fmt.Sprintf("http://%s/update/counter/%v/%v", s.url, name, value), nil)
 	if err != nil {
 		return err
 	}
@@ -78,7 +80,7 @@ func (s *ServerConsumer) SendGauge(name string, value float64) error {
 	if value < 0 {
 		return ErrValueIsIncorrect
 	}
-	request, err := http.NewRequest(http.MethodPost, fmt.Sprintf("http://localhost:8080/update/gauge/%v/%v", name, value), nil)
+	request, err := http.NewRequest(http.MethodPost, fmt.Sprintf("http://%s/update/gauge/%v/%v", s.url, name, value), nil)
 	if err != nil {
 		return err
 	}

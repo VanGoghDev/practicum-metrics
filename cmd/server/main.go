@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"net/http"
 
 	"github.com/VanGoghDev/practicum-metrics/internal/server/routers/chirouter"
@@ -8,6 +9,13 @@ import (
 )
 
 func main() {
+	parseFlags()
+	if err := run(); err != nil {
+		panic(err)
+	}
+}
+
+func run() error {
 	// config
 
 	// logger
@@ -21,5 +29,6 @@ func main() {
 	// router
 	router := chirouter.BuildRouter(&s, &s)
 
-	http.ListenAndServe(`:8080`, router)
+	fmt.Printf("Server start and running on port %s \n", flagRunAddr)
+	return http.ListenAndServe(flagRunAddr, router)
 }
