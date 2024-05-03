@@ -1,9 +1,8 @@
-package provider
+package metrics
 
 import (
 	"errors"
 	"fmt"
-	"io"
 	"net/http"
 	"strconv"
 
@@ -35,11 +34,19 @@ func MetricsHandler(s MetricsProvider) http.HandlerFunc {
 		}
 
 		for _, g := range gauges {
-			io.WriteString(w, fmt.Sprintf("%s: %f \n", g.Name, g.Value))
+			_, err = fmt.Fprintf(w, "%s: %f \n", g.Name, g.Value)
+			if err != nil {
+				http.Error(w, "", http.StatusInternalServerError)
+				break
+			}
 		}
 
 		for _, c := range counters {
-			io.WriteString(w, fmt.Sprintf("%s: %d \n", c.Name, c.Value))
+			_, err = fmt.Fprintf(w, "%s: %d \n", c.Name, c.Value)
+			if err != nil {
+				http.Error(w, "", http.StatusInternalServerError)
+				break
+			}
 		}
 	}
 }
@@ -70,10 +77,12 @@ func MetricHandler(s MetricsProvider) http.HandlerFunc {
 						return
 					}
 					http.Error(w, "Internal error", http.StatusInternalServerError)
+					return
 				}
 				_, err = fmt.Fprintf(w, "%d", counter.Value)
 				if err != nil {
-					http.Error(w, "", http.StatusInternalServerError)
+					http.Error(w, "Internal error", http.StatusInternalServerError)
+					return
 				}
 				return
 			}
@@ -86,8 +95,13 @@ func MetricHandler(s MetricsProvider) http.HandlerFunc {
 						return
 					}
 					http.Error(w, "Internal error", http.StatusInternalServerError)
+					return
 				}
-				io.WriteString(w, strconv.FormatFloat(gauge.Value, 'f', -1, 64))
+				_, err = fmt.Fprintf(w, "%s", strconv.FormatFloat(gauge.Value, 'f', -1, 64))
+				if err != nil {
+					http.Error(w, "Internal error", http.StatusInternalServerError)
+					return
+				}
 				return
 			}
 		}

@@ -25,7 +25,6 @@ type App struct {
 }
 
 func New(consumerAddress string, reportInterval, pollInterval time.Duration) *App {
-	// metrics service
 	metricsService := metrics.New()
 	consumer := server.New(metricsService, &http.Client{}, consumerAddress)
 
@@ -63,14 +62,14 @@ func (a *App) Run() error {
 
 	go func() {
 		for {
-			time.Sleep(10 * time.Second)
+			time.Sleep(a.reportInterval)
 			report <- true
 		}
 	}()
 
 	go func() {
 		for {
-			time.Sleep(2 * time.Second)
+			time.Sleep(a.pollInterval)
 			poll <- true
 		}
 	}()
@@ -99,37 +98,6 @@ func (a *App) Run() error {
 			metrics = a.MetricsProvider.ReadMetrics()
 		}
 	}
-
-	// c := make(chan int)
-	// for {
-	// 	go a.poll(pollCount, c)
-	// 	go a.report(c)
-	// }
-
-	// for {
-	// 	pollCount++
-	// 	metrics := a.MetricsProvider.ReadMetrics()
-
-	// 	if pollCount%5 == 0 {
-	// 		err := a.Consumer.SendRuntimeGauge(metrics)
-	// 		if err != nil {
-	// 			return err
-	// 		}
-
-	// 		err = a.Consumer.SendCounter("PollCount", int64(pollCount))
-	// 		if err != nil {
-	// 			return err
-	// 		}
-
-	// 		randomValue := randFloats(1.10, 101.98, 5)
-	// 		err = a.Consumer.SendGauge("RandomValue", randomValue)
-	// 		if err != nil {
-	// 			return err
-	// 		}
-	// 	}
-
-	// 	time.Sleep(a.pollInterval * time.Second)
-	// }
 }
 
 func randFloats(min, max float64, n int) float64 {

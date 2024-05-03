@@ -1,0 +1,183 @@
+
+digraph {
+	labelloc="t";
+	label="github.com/VanGoghDev/practicum-metrics";
+	rankdir="TB";
+	node [shape="rect"];
+
+	subgraph cluster_pkg_server {
+		label="internal/agent/services/consumer/http";
+		style="filled";
+		fontcolor="#000000";
+		fillcolor="#ffffff";
+
+		pkg_server_file_server_test [label="server_test.go", style="filled", fontcolor="#000000", fillcolor="#ffffff"];
+	};
+ 
+	subgraph cluster_pkg_models {
+		label="internal/domain/models";
+		style="filled";
+		fontcolor="#000000";
+		fillcolor="#ffffff";
+
+		pkg_models_file_gauge [label="gauge.go", style="filled", fontcolor="#000000", fillcolor="#ffffff"];
+	};
+
+	subgraph cluster_pkg_mocks {
+		label="internal/server/handlers/mocks";
+		style="filled";
+		fontcolor="#000000";
+		fillcolor="#ffffff";
+
+		pkg_mocks_file_MemStorageMock [label="MemStorageMock.go", style="filled", fontcolor="#000000", fillcolor="#ffffff"];
+	};
+
+	subgraph cluster_pkg_config {
+		label="internal/server/config";
+		style="filled";
+		fontcolor="#000000";
+		fillcolor="#ffffff";
+
+		pkg_config_file_config [label="config.go", style="filled", fontcolor="#000000", fillcolor="#ffffff"];
+	};
+
+	subgraph cluster_pkg_handlers {
+		label="internal/server/handlers";
+		style="filled";
+		fontcolor="#000000";
+		fillcolor="#ffffff";
+
+		pkg_handlers_file_handlers [label="handlers.go", style="filled", fontcolor="#000000", fillcolor="#ffffff"];
+	};
+
+	subgraph cluster_pkg_main {
+		label="cmd/agent:main";
+		style="filled";
+		fontcolor="#000000";
+		fillcolor="#ffffff";
+
+		pkg_main_file_main [label="main.go", style="filled", fontcolor="#000000", fillcolor="#ffffff"];
+	};
+
+	subgraph cluster_pkg_chirouter {
+		label="internal/server/routers/chirouter";
+		style="filled";
+		fontcolor="#ff0000";
+		fillcolor="#ffffff";
+
+		pkg_chirouter_file_chirouter [label="chirouter.go", style="filled", fontcolor="#ff0000", fillcolor="#ffffff"];
+	};
+
+	subgraph cluster_pkg_metrics {
+		label="internal/agent/services/metrics";
+		style="filled";
+		fontcolor="#000000";
+		fillcolor="#ffffff";
+
+		pkg_metrics_file_metrics [label="metrics.go", style="filled", fontcolor="#000000", fillcolor="#ffffff"];
+	};
+
+	subgraph cluster_pkg_mocks {
+		label="internal/agent/services/metrics/mocks";
+		style="filled";
+		fontcolor="#000000";
+		fillcolor="#ffffff";
+
+		pkg_mocks_file_MetricsProviderMock [label="MetricsProviderMock.go", style="filled", fontcolor="#000000", fillcolor="#ffffff"];
+	};
+
+	subgraph cluster_pkg_metrics {
+		label="internal/server/handlers/metrics";
+		style="filled";
+		fontcolor="#ff0000";
+		fillcolor="#ffffff";
+
+		pkg_metrics_file_metrics_test [label="metrics_test.go", style="filled", fontcolor="#ff0000", fillcolor="#ffffff"];
+	};
+
+	subgraph cluster_pkg_update {
+		label="internal/server/handlers/update";
+		style="filled";
+		fontcolor="#000000";
+		fillcolor="#ffffff";
+
+		pkg_update_file_update_test [label="update_test.go", style="filled", fontcolor="#000000", fillcolor="#ffffff"];
+	};
+
+	subgraph cluster_pkg_app {
+		label="internal/agent/app";
+		style="filled";
+		fontcolor="#000000";
+		fillcolor="#ffffff";
+
+		pkg_app_file_app [label="app.go", style="filled", fontcolor="#000000", fillcolor="#ffffff"];
+	};
+
+	subgraph cluster_pkg_memstorage {
+		label="internal/storage/memstorage";
+		style="filled";
+		fontcolor="#000000";
+		fillcolor="#ffffff";
+
+		pkg_memstorage_file_memstorage_test [label="memstorage_test.go", style="filled", fontcolor="#000000", fillcolor="#ffffff"];
+	};
+
+	subgraph cluster_pkg_storage {
+		label="internal/storage";
+		style="filled";
+		fontcolor="#000000";
+		fillcolor="#ffffff";
+
+		pkg_storage_file_storage [label="storage.go", style="filled", fontcolor="#000000", fillcolor="#ffffff"];
+	};
+
+	subgraph cluster_pkg_main {
+		label="cmd/server:main";
+		style="filled";
+		fontcolor="#000000";
+		fillcolor="#ffffff";
+
+		pkg_main_file_main [label="main.go", style="filled", fontcolor="#000000", fillcolor="#ffffff"];
+	};
+
+	subgraph cluster_pkg_mocks {
+		label="internal/agent/http/mocks";
+		style="filled";
+		fontcolor="#000000";
+		fillcolor="#ffffff";
+
+		pkg_mocks_file_HttpClientMock [label="HttpClientMock.go", style="filled", fontcolor="#000000", fillcolor="#ffffff"];
+	};
+
+	pkg_server_file_server_test -> pkg_mocks_file_HttpClientMock [color="#000000"];
+	pkg_server_file_server_test -> pkg_mocks_file_HttpClientMock [color="#000000"];
+	pkg_server_file_server_test -> pkg_mocks_file_HttpClientMock [color="#000000"];
+	pkg_server_file_server_test -> pkg_mocks_file_MetricsProviderMock [color="#000000"];
+	pkg_mocks_file_MemStorageMock -> pkg_models_file_gauge [color="#000000"];
+	pkg_mocks_file_MemStorageMock -> pkg_models_file_gauge [color="#000000"];
+	pkg_main_file_main -> pkg_app_file_app [color="#000000"];
+	pkg_main_file_main -> pkg_app_file_stub [color="#000000"];
+	pkg_chirouter_file_chirouter -> pkg_metrics_file_metrics_test [color="#ff0000"];
+	pkg_chirouter_file_chirouter -> pkg_metrics_file_metrics_test [color="#ff0000"];
+	pkg_chirouter_file_chirouter -> pkg_metrics_file_metrics_test [color="#ff0000"];
+	pkg_chirouter_file_chirouter -> pkg_update_file_update_test [color="#000000"];
+	pkg_chirouter_file_chirouter -> pkg_update_file_update_test [color="#000000"];
+	pkg_metrics_file_metrics_test -> pkg_chirouter_file_chirouter [color="#ff0000"];
+	pkg_metrics_file_metrics_test -> pkg_models_file_gauge [color="#000000"];
+	pkg_metrics_file_metrics_test -> pkg_models_file_gauge [color="#000000"];
+	pkg_metrics_file_metrics_test -> pkg_handlers_file_handlers [color="#000000"];
+	pkg_metrics_file_metrics_test -> pkg_handlers_file_handlers [color="#000000"];
+	pkg_metrics_file_metrics_test -> pkg_memstorage_file_memstorage_test [color="#000000"];
+	pkg_metrics_file_metrics_test -> pkg_mocks_file_MemStorageMock [color="#000000"];
+	pkg_update_file_update_test -> pkg_handlers_file_handlers [color="#000000"];
+	pkg_update_file_update_test -> pkg_handlers_file_handlers [color="#000000"];
+	pkg_update_file_update_test -> pkg_mocks_file_MemStorageMock [color="#000000"];
+	pkg_app_file_app -> pkg_server_file_server_test [color="#000000"];
+	pkg_app_file_app -> pkg_server_file_server_test [color="#000000"];
+	pkg_app_file_app -> pkg_metrics_file_metrics [color="#000000"];
+	pkg_app_file_app -> pkg_metrics_file_metrics [color="#000000"];
+	pkg_memstorage_file_memstorage_test -> pkg_models_file_gauge [color="#000000"];
+	pkg_memstorage_file_memstorage_test -> pkg_models_file_gauge [color="#000000"];
+	pkg_main_file_main -> pkg_chirouter_file_chirouter [color="#000000"];
+	pkg_main_file_main -> pkg_memstorage_file_memstorage_test [color="#000000"];
+}

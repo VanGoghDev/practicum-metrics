@@ -1,4 +1,4 @@
-package provider
+package metrics_test
 
 import (
 	"fmt"
@@ -6,11 +6,11 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/go-chi/chi"
 	"github.com/go-resty/resty/v2"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/VanGoghDev/practicum-metrics/internal/server/handlers/mocks"
+	"github.com/VanGoghDev/practicum-metrics/internal/server/routers/chirouter"
 )
 
 func TestMetricHandler(t *testing.T) {
@@ -74,16 +74,9 @@ func TestMetricHandler(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			r := chi.NewRouter()
-			// chirouter.BuildRouter(&mocks.MemStorageMock{
-			// 	GaugesM:   tt.gaugesM,
-			// 	CountersM: tt.countersM,
-			// }, nil)
-			r.Route("/value", func(r chi.Router) {
-				r.Get("/{type}/{name}", MetricHandler(&mocks.MemStorageMock{
-					GaugesM:   tt.gaugesM,
-					CountersM: tt.countersM,
-				}))
+			r := chirouter.BuildRouter(nil, &mocks.MemStorageMock{
+				GaugesM:   tt.gaugesM,
+				CountersM: tt.countersM,
 			})
 			srv := httptest.NewServer(r)
 			defer srv.Close()
