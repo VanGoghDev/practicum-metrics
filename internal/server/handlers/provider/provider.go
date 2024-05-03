@@ -71,7 +71,10 @@ func MetricHandler(s MetricsProvider) http.HandlerFunc {
 					}
 					http.Error(w, "Internal error", http.StatusInternalServerError)
 				}
-				io.WriteString(w, fmt.Sprintf("%d", counter.Value))
+				_, err = fmt.Fprintf(w, "%d", counter.Value)
+				if err != nil {
+					http.Error(w, "", http.StatusInternalServerError)
+				}
 				return
 			}
 		case handlers.Gauge:
@@ -85,6 +88,7 @@ func MetricHandler(s MetricsProvider) http.HandlerFunc {
 					http.Error(w, "Internal error", http.StatusInternalServerError)
 				}
 				io.WriteString(w, strconv.FormatFloat(gauge.Value, 'f', -1, 64))
+				return
 			}
 		}
 	}

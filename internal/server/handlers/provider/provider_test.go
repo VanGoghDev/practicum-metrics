@@ -75,6 +75,10 @@ func TestMetricHandler(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			r := chi.NewRouter()
+			// chirouter.BuildRouter(&mocks.MemStorageMock{
+			// 	GaugesM:   tt.gaugesM,
+			// 	CountersM: tt.countersM,
+			// }, nil)
 			r.Route("/value", func(r chi.Router) {
 				r.Get("/{type}/{name}", MetricHandler(&mocks.MemStorageMock{
 					GaugesM:   tt.gaugesM,

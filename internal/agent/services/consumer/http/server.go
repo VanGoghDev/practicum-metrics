@@ -34,9 +34,7 @@ func New(metricsProvider MetricsProvider, client HTTPClient, url string) *Server
 }
 
 // sends gauge taken from metrics provider (runtime metrics)
-func (s *ServerConsumer) SendRuntimeGauge() error {
-	metrics := s.metricsProvider.ReadMetrics()
-
+func (s *ServerConsumer) SendRuntimeGauge(metrics *map[string]any) error {
 	for k, v := range *metrics {
 		request, err := http.NewRequest(http.MethodPost, fmt.Sprintf("http://%s/update/gauge/%v/%v", s.url, k, v), nil)
 		if err != nil {

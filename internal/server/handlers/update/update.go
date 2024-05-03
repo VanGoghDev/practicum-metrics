@@ -39,6 +39,7 @@ func UpdateHandler(storage MetricsSaver) http.HandlerFunc {
 				}
 			} else {
 				http.Error(w, "Invalid metric value", http.StatusBadRequest)
+				return
 			}
 		}
 
@@ -51,6 +52,7 @@ func UpdateHandler(storage MetricsSaver) http.HandlerFunc {
 				}
 			} else {
 				http.Error(w, "Invalid metric value", http.StatusBadRequest)
+				return
 			}
 		}
 		w.Header().Add("Content-Type", "text/plain; charset=utf-8")

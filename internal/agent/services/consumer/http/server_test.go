@@ -209,7 +209,7 @@ func TestSendRuntimeGauge(t *testing.T) {
 				metricsProvider: metricsProviderMock,
 				client:          &httpMock.MockClient{},
 			}
-			err := s.SendRuntimeGauge()
+			err := s.SendRuntimeGauge(metricsProviderMock.ReadMetrics())
 			assert.Equal(t, tt.err, err)
 		})
 	}

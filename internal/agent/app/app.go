@@ -27,8 +27,6 @@ type App struct {
 func New(consumerAddress string, reportInterval, pollInterval time.Duration) *App {
 	// metrics service
 	metricsService := metrics.New()
-	fmt.Println(reportInterval)
-	fmt.Println(pollInterval)
 	consumer := server.New(metricsService, &http.Client{}, consumerAddress)
 
 	return &App{
@@ -56,11 +54,32 @@ func (a *App) Run() error {
 	}
 
 	pollCount := 0
-	for {
-		pollCount++
 
-		if pollCount%5 == 0 {
-			err := a.Consumer.SendRuntimeGauge()
+	ticker := time.NewTicker(time.Second)
+	defer ticker.Stop()
+
+	report := make(chan bool)
+	poll := make(chan bool)
+
+	go func() {
+		for {
+			time.Sleep(10 * time.Second)
+			report <- true
+		}
+	}()
+
+	go func() {
+		for {
+			time.Sleep(2 * time.Second)
+			poll <- true
+		}
+	}()
+	metrics := a.MetricsProvider.ReadMetrics()
+	for {
+
+		select {
+		case <-report:
+			err := a.Consumer.SendRuntimeGauge(metrics)
 			if err != nil {
 				return err
 			}
@@ -70,15 +89,47 @@ func (a *App) Run() error {
 				return err
 			}
 
-			randomValue := randFloats(1.10, 101.98, 5)
+			randomValue := randFloats(0, 100000, 5)
 			err = a.Consumer.SendGauge("RandomValue", randomValue)
 			if err != nil {
 				return err
 			}
+		case <-poll:
+			pollCount++
+			metrics = a.MetricsProvider.ReadMetrics()
 		}
-
-		time.Sleep(a.pollInterval * time.Second)
 	}
+
+	// c := make(chan int)
+	// for {
+	// 	go a.poll(pollCount, c)
+	// 	go a.report(c)
+	// }
+
+	// for {
+	// 	pollCount++
+	// 	metrics := a.MetricsProvider.ReadMetrics()
+
+	// 	if pollCount%5 == 0 {
+	// 		err := a.Consumer.SendRuntimeGauge(metrics)
+	// 		if err != nil {
+	// 			return err
+	// 		}
+
+	// 		err = a.Consumer.SendCounter("PollCount", int64(pollCount))
+	// 		if err != nil {
+	// 			return err
+	// 		}
+
+	// 		randomValue := randFloats(1.10, 101.98, 5)
+	// 		err = a.Consumer.SendGauge("RandomValue", randomValue)
+	// 		if err != nil {
+	// 			return err
+	// 		}
+	// 	}
+
+	// 	time.Sleep(a.pollInterval * time.Second)
+	// }
 }
 
 func randFloats(min, max float64, n int) float64 {
