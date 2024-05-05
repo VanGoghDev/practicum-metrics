@@ -1,13 +1,14 @@
 package main
 
 import (
-	"time"
-
 	"github.com/VanGoghDev/practicum-metrics/internal/agent/app"
+	"github.com/VanGoghDev/practicum-metrics/internal/agent/config"
 )
 
 func main() {
-	parseFlags()
-	app := app.New(flagConsumerAddr, time.Duration(flagReportInterval)*time.Second, time.Duration(flagPollInterval)*time.Second)
+
+	cfg := config.MustLoad()
+
+	app := app.New(cfg)
 	app.MustRun()
 }

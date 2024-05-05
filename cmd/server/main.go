@@ -4,12 +4,12 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/VanGoghDev/practicum-metrics/internal/server/config"
 	"github.com/VanGoghDev/practicum-metrics/internal/server/routers/chirouter"
 	memStorage "github.com/VanGoghDev/practicum-metrics/internal/storage/memstorage"
 )
 
 func main() {
-	parseFlags()
 	if err := run(); err != nil {
 		panic(err)
 	}
@@ -17,7 +17,7 @@ func main() {
 
 func run() error {
 	// config
-
+	cfg := config.MustLoad()
 	// logger
 
 	// storage
@@ -29,6 +29,6 @@ func run() error {
 	// router
 	router := chirouter.BuildRouter(&s, &s)
 
-	fmt.Printf("Server start and running on port %s \n", flagRunAddr)
-	return http.ListenAndServe(flagRunAddr, router)
+	fmt.Printf("Server start and running on port %s \n", cfg.Address)
+	return http.ListenAndServe(cfg.Address, router)
 }

@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/VanGoghDev/practicum-metrics/internal/agent/config"
 	server "github.com/VanGoghDev/practicum-metrics/internal/agent/services/consumer/http"
 	"github.com/VanGoghDev/practicum-metrics/internal/agent/services/metrics"
 )
@@ -24,15 +25,15 @@ type App struct {
 	pollInterval   time.Duration
 }
 
-func New(consumerAddress string, reportInterval, pollInterval time.Duration) *App {
+func New(cfg *config.Config) *App {
 	metricsService := metrics.New()
-	consumer := server.New(metricsService, &http.Client{}, consumerAddress)
+	consumer := server.New(metricsService, &http.Client{}, cfg.Address)
 
 	return &App{
 		Consumer:        consumer,
 		MetricsProvider: metricsService,
-		reportInterval:  reportInterval,
-		pollInterval:    pollInterval,
+		reportInterval:  cfg.ReportInterval,
+		pollInterval:    cfg.PollInterval,
 	}
 }
 
