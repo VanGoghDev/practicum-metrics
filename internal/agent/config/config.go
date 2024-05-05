@@ -25,12 +25,12 @@ func MustLoad() *Config {
 	}
 
 	var reportInteval, pollInterval int64
-	if cfg.Address == "" {
+	if cfg.ReportInterval == 0 {
 		flag.Int64Var(&reportInteval, "r", 10, "report interval (interval of requests to consumer, in seconds)")
 		cfg.ReportInterval = time.Duration(reportInteval) * time.Second
 	}
 
-	if cfg.Address == "" {
+	if cfg.PollInterval == 0 {
 		flag.Int64Var(&pollInterval, "p", 2, "poll interval (interval of metrics fetch, in seconds)")
 		cfg.PollInterval = time.Duration(pollInterval) * time.Second
 	}
