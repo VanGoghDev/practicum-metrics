@@ -2,6 +2,7 @@ package config
 
 import (
 	"flag"
+	"log"
 	"time"
 
 	"github.com/caarlos0/env"
@@ -17,7 +18,7 @@ func MustLoad() *Config {
 	cfg := Config{}
 
 	if err := env.Parse(&cfg); err != nil {
-		panic("failed to parse environment variables")
+		log.Println("Failed to parse config")
 	}
 
 	if cfg.Address == "" {
