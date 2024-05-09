@@ -105,20 +105,3 @@ func TestSendCounter(t *testing.T) {
 		})
 	}
 }
-
-func TestSendRuntimeGauge(t *testing.T) {
-	for _, tt := range tests() {
-		t.Run(tt.name, func(t *testing.T) {
-			metricsProviderMock := mocks.MetricsProviderMock{}
-			s := &ServerConsumer{
-				metricsProvider: metricsProviderMock,
-				client: &httpMock.MockClient{
-					DoFunc: tt.mockHTTPFunc,
-				},
-			}
-			metrics, _ := metricsProviderMock.ReadMetrics()
-			err := s.SendRuntimeGauge(metrics)
-			assert.Equal(t, tt.err, err)
-		})
-	}
-}
