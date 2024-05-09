@@ -3,6 +3,7 @@ package metrics
 import (
 	"errors"
 	"fmt"
+	"log"
 	"net/http"
 	"strconv"
 
@@ -24,11 +25,13 @@ func MetricsHandler(s MetricsProvider) http.HandlerFunc {
 		gauges, err := s.Gauges()
 
 		if err != nil {
+			log.Printf("failed to fetch metrics: %v", err)
 			http.Error(w, "Internal error", http.StatusInternalServerError)
 			return
 		}
 		counters, err := s.Counters()
 		if err != nil {
+			log.Printf("failed to fetch metrics: %v", err)
 			http.Error(w, "Internal error", http.StatusInternalServerError)
 			return
 		}
@@ -36,6 +39,7 @@ func MetricsHandler(s MetricsProvider) http.HandlerFunc {
 		for _, g := range gauges {
 			_, err = fmt.Fprintf(w, "%s: %f \n", g.Name, g.Value)
 			if err != nil {
+				log.Printf("failed to fetch metrics: %v", err)
 				http.Error(w, "", http.StatusInternalServerError)
 				break
 			}
@@ -44,6 +48,7 @@ func MetricsHandler(s MetricsProvider) http.HandlerFunc {
 		for _, c := range counters {
 			_, err = fmt.Fprintf(w, "%s: %d \n", c.Name, c.Value)
 			if err != nil {
+				log.Printf("failed to fetch metrics: %v", err)
 				http.Error(w, "", http.StatusInternalServerError)
 				break
 			}
@@ -94,11 +99,13 @@ func MetricHandler(s MetricsProvider) http.HandlerFunc {
 						http.Error(w, "Not found", http.StatusNotFound)
 						return
 					}
+					log.Printf("failed to fetch gauge: %v", err)
 					http.Error(w, "Internal error", http.StatusInternalServerError)
 					return
 				}
 				_, err = fmt.Fprintf(w, "%s", strconv.FormatFloat(gauge.Value, 'f', -1, 64))
 				if err != nil {
+					log.Printf("failed to fetch gauge: %v", err)
 					http.Error(w, "Internal error", http.StatusInternalServerError)
 					return
 				}

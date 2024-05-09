@@ -14,28 +14,34 @@ type Config struct {
 	PollInterval   time.Duration `env:"POLLINTERVAL"`
 }
 
-func MustLoad() *Config {
+func Load() (config *Config, err error) {
 	cfg := Config{}
 
 	if err := env.Parse(&cfg); err != nil {
 		log.Println("Failed to parse config")
+		return nil, err
 	}
 
-	if cfg.Address == "" {
-		flag.StringVar(&cfg.Address, "a", "localhost:8080", "address and port to run server")
-	}
+	var flagAddress string
+	flag.StringVar(&flagAddress, "a", "localhost:8080", "address and port to run server")
 
 	var reportInteval, pollInterval int64
+	flag.Int64Var(&reportInteval, "r", 10, "report interval (interval of requests to consumer, in seconds)")
+	flag.Int64Var(&pollInterval, "p", 2, "poll interval (interval of metrics fetch, in seconds)")
+
+	flag.Parse()
+
+	if cfg.Address == "" {
+		cfg.Address = flagAddress
+	}
+
 	if cfg.ReportInterval == 0 {
-		flag.Int64Var(&reportInteval, "r", 10, "report interval (interval of requests to consumer, in seconds)")
 		cfg.ReportInterval = time.Duration(reportInteval) * time.Second
 	}
 
 	if cfg.PollInterval == 0 {
-		flag.Int64Var(&pollInterval, "p", 2, "poll interval (interval of metrics fetch, in seconds)")
 		cfg.PollInterval = time.Duration(pollInterval) * time.Second
 	}
 
-	flag.Parse()
-	return &cfg
+	return &cfg, nil
 }

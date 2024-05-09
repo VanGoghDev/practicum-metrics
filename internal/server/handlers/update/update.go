@@ -1,6 +1,7 @@
 package update
 
 import (
+	"log"
 	"net/http"
 	"strconv"
 
@@ -34,6 +35,7 @@ func UpdateHandler(storage MetricsSaver) http.HandlerFunc {
 			if val, err := strconv.ParseFloat(mVal, 64); err == nil {
 				err := storage.SaveGauge(mName, val)
 				if err != nil {
+					log.Printf("failed to save gauge: %v", err)
 					http.Error(w, "Internal error", http.StatusInternalServerError)
 					return
 				}
@@ -47,6 +49,7 @@ func UpdateHandler(storage MetricsSaver) http.HandlerFunc {
 			if val, err := strconv.ParseInt(mVal, 0, 64); err == nil {
 				err := storage.SaveCount(mName, val)
 				if err != nil {
+					log.Printf("failed to save counter: %v", err)
 					http.Error(w, "Internal error", http.StatusInternalServerError)
 					return
 				}

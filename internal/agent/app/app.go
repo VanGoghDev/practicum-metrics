@@ -37,10 +37,11 @@ func New(cfg *config.Config) *App {
 	}
 }
 
-func (a *App) MustRun() {
+func (a *App) RunApp() error {
 	if err := a.Run(); err != nil {
-		panic(err)
+		return err
 	}
+	return nil
 }
 
 func (a *App) Run() error {
@@ -54,31 +55,26 @@ func (a *App) Run() error {
 	}
 
 	pollCount := 0
+	metrics := a.MetricsProvider.ReadMetrics()
 
 	ticker := time.NewTicker(time.Second)
 	defer ticker.Stop()
 
-	report := make(chan bool)
-	poll := make(chan bool)
+	sent := make(chan string)
+	pollTicker := time.NewTicker(a.pollInterval)
+	defer pollTicker.Stop()
 
-	go func() {
-		for {
-			time.Sleep(a.reportInterval)
-			report <- true
-		}
-	}()
+	reportTicker := time.NewTicker(a.reportInterval)
+	defer reportTicker.Stop()
 
-	go func() {
-		for {
-			time.Sleep(a.pollInterval)
-			poll <- true
-		}
-	}()
-	metrics := a.MetricsProvider.ReadMetrics()
 	for {
-
 		select {
-		case <-report:
+		case <-sent:
+			pollCount = 0
+		case <-pollTicker.C:
+			pollCount++
+			metrics = a.MetricsProvider.ReadMetrics()
+		case <-reportTicker.C:
 			err := a.Consumer.SendRuntimeGauge(metrics)
 			if err != nil {
 				return err
@@ -89,22 +85,10 @@ func (a *App) Run() error {
 				return err
 			}
 
-			randomValue := randFloats(0, 100000, 5)
-			err = a.Consumer.SendGauge("RandomValue", randomValue)
+			err = a.Consumer.SendGauge("RandomValue", rand.Float64())
 			if err != nil {
 				return err
 			}
-		case <-poll:
-			pollCount++
-			metrics = a.MetricsProvider.ReadMetrics()
 		}
 	}
-}
-
-func randFloats(min, max float64, n int) float64 {
-	res := make([]float64, n)
-	for i := range res {
-		res[i] = min + rand.Float64()*(max-min)
-	}
-	return res[0]
 }

@@ -1,7 +1,7 @@
 package metrics
 
 import (
-	"reflect"
+	"encoding/json"
 	"runtime"
 )
 
@@ -16,13 +16,14 @@ func (mp *MetricsProvider) ReadMetrics() *map[string]any {
 	m := new(runtime.MemStats)
 
 	runtime.ReadMemStats(m)
-	v := reflect.ValueOf(*m)
-	typeV := v.Type()
+
+	jM, err := json.Marshal(m)
+	if err != nil {
+
+	}
 
 	metricsMap := make(map[string]any)
-	for i := 0; i < v.NumField(); i++ {
-		metricsMap[typeV.Field(i).Name] = v.Field(i).Interface()
-	}
+	json.Unmarshal(jM, &metricsMap)
 
 	return &metricsMap
 }

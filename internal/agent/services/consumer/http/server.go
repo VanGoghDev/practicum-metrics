@@ -45,7 +45,6 @@ func (s *ServerConsumer) SendRuntimeGauge(metrics *map[string]any) error {
 			return err
 		}
 		defer resp.Body.Close()
-		//_, err := http.Post(fmt.Sprintf("http://localhost:8080/update/gauge/%v/%v", k, v), "text/plain", nil)
 	}
 
 	return nil

@@ -1,7 +1,7 @@
 package main
 
 import (
-	"fmt"
+	"log"
 	"net/http"
 
 	"github.com/VanGoghDev/practicum-metrics/internal/server/config"
@@ -17,18 +17,21 @@ func main() {
 
 func run() error {
 	// config
-	cfg := config.MustLoad()
+	cfg, err := config.Load()
+	if err != nil {
+		log.Fatal(err)
+	}
 	// logger
 
 	// storage
 	s, err := memStorage.New()
 	if err != nil {
-		panic("Failed to init storage")
+		log.Fatal(err)
 	}
 
 	// router
 	router := chirouter.BuildRouter(&s, &s)
 
-	fmt.Printf("Server start and running on port %s \n", cfg.Address)
+	log.Printf("Server start and running on port %s \n", cfg.Address)
 	return http.ListenAndServe(cfg.Address, router)
 }
