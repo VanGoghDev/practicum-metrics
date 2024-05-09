@@ -17,10 +17,7 @@ func (mp *MetricsProvider) ReadMetrics() *map[string]any {
 
 	runtime.ReadMemStats(m)
 
-	jM, err := json.Marshal(m)
-	if err != nil {
-
-	}
+	jM, _ := json.Marshal(m)
 
 	metricsMap := make(map[string]any)
 	json.Unmarshal(jM, &metricsMap)
