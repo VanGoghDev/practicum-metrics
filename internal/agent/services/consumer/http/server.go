@@ -16,7 +16,7 @@ type HTTPClient interface {
 }
 
 type MetricsProvider interface {
-	ReadMetrics() *map[string]any
+	ReadMetrics() (map[string]any, error)
 }
 
 type ServerConsumer struct {
@@ -33,18 +33,24 @@ func New(metricsProvider MetricsProvider, client HTTPClient, url string) *Server
 	}
 }
 
-// sends gauge taken from metrics provider (runtime metrics)
-func (s *ServerConsumer) SendRuntimeGauge(metrics *map[string]any) error {
-	for k, v := range *metrics {
-		request, err := http.NewRequest(http.MethodPost, fmt.Sprintf("http://%s/update/gauge/%v/%v", s.url, k, v), nil)
+func (s *ServerConsumer) SendRuntimeGauge(metrics map[string]any) error {
+	for k, v := range metrics {
+		request, err := http.NewRequest(
+			http.MethodPost,
+			fmt.Sprintf("http://%s/update/gauge/%v/%v", s.url, k, v),
+			http.NoBody)
+
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to create request for gauge update %w", err)
 		}
 		resp, err := s.client.Do(request)
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to save gauges on server %w", err)
 		}
-		defer resp.Body.Close()
+		err = resp.Body.Close()
+		if err != nil {
+			return fmt.Errorf("failed to close body %w", err)
+		}
 	}
 
 	return nil
@@ -57,17 +63,15 @@ func (s *ServerConsumer) SendCounter(name string, value int64) error {
 	if value < 0 {
 		return ErrValueIsIncorrect
 	}
-	request, err := http.NewRequest(http.MethodPost, fmt.Sprintf("http://%s/update/counter/%v/%v", s.url, name, value), nil)
-	if err != nil {
-		return err
-	}
-	resp, err := s.client.Do(request)
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
+	request, err := http.NewRequest(
+		http.MethodPost,
+		fmt.Sprintf("http://%s/update/counter/%v/%v", s.url, name, value),
+		http.NoBody)
 
-	return nil
+	if err != nil {
+		return fmt.Errorf("failed to create request for counter update %w", err)
+	}
+	return s.sendRequest(request)
 }
 
 func (s *ServerConsumer) SendGauge(name string, value float64) error {
@@ -77,15 +81,26 @@ func (s *ServerConsumer) SendGauge(name string, value float64) error {
 	if value < 0 {
 		return ErrValueIsIncorrect
 	}
-	request, err := http.NewRequest(http.MethodPost, fmt.Sprintf("http://%s/update/gauge/%v/%v", s.url, name, value), nil)
+	request, err := http.NewRequest(
+		http.MethodPost,
+		fmt.Sprintf("http://%s/update/gauge/%v/%v", s.url, name, value),
+		http.NoBody)
+
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to create request for gauge update %w", err)
 	}
+	return s.sendRequest(request)
+}
+
+func (s *ServerConsumer) sendRequest(request *http.Request) error {
 	resp, err := s.client.Do(request)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to save gauge on server %w", err)
 	}
-	defer resp.Body.Close()
+	err = resp.Body.Close()
+	if err != nil {
+		return fmt.Errorf("failed to close body %w", err)
+	}
 
 	return nil
 }

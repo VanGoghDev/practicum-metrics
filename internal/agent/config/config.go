@@ -2,6 +2,7 @@ package config
 
 import (
 	"flag"
+	"fmt"
 	"log"
 	"time"
 
@@ -14,20 +15,27 @@ type Config struct {
 	PollInterval   time.Duration `env:"POLLINTERVAL"`
 }
 
+const (
+	defaultReportInterval int64 = 10
+	defaultPollInterval   int64 = 2
+)
+
 func Load() (config *Config, err error) {
 	cfg := Config{}
 
 	if err := env.Parse(&cfg); err != nil {
 		log.Println("Failed to parse config")
-		return nil, err
+		return nil, fmt.Errorf("failed to load config %w", err)
 	}
 
 	var flagAddress string
 	flag.StringVar(&flagAddress, "a", "localhost:8080", "address and port to run server")
 
 	var reportInteval, pollInterval int64
-	flag.Int64Var(&reportInteval, "r", 10, "report interval (interval of requests to consumer, in seconds)")
-	flag.Int64Var(&pollInterval, "p", 2, "poll interval (interval of metrics fetch, in seconds)")
+	flag.Int64Var(&reportInteval,
+		"r", defaultReportInterval,
+		"report interval (interval of requests to consumer, in seconds)")
+	flag.Int64Var(&pollInterval, "p", defaultPollInterval, "poll interval (interval of metrics fetch, in seconds)")
 
 	flag.Parse()
 

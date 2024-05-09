@@ -57,19 +57,6 @@ func TestMetricHandler(t *testing.T) {
 				value:      "100",
 			},
 		},
-		// {
-		// 	name: "Get empty counter returns 404",
-		// 	params: map[string]string{
-		// 		"type": "counter",
-		// 		"name": "testCounter",
-		// 	},
-		// 	gaugesM:   map[string]float64{},
-		// 	countersM: map[string]int64{},
-		// 	want: want{
-		// 		statusCode: 404,
-		// 		value:      "0",
-		// 	},
-		// },
 	}
 
 	for _, tt := range tests {

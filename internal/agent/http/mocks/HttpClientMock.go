@@ -10,10 +10,6 @@ type MockClient struct {
 
 type GetDoFuncType func(req *http.Request) (*http.Response, error)
 
-var (
-	GetDoFunc func(req *http.Request) (*http.Response, error)
-)
-
 func (m *MockClient) Do(req *http.Request) (*http.Response, error) {
-	return GetDoFunc(req)
+	return m.DoFunc(req)
 }

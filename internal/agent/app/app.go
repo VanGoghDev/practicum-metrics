@@ -55,7 +55,7 @@ func (a *App) Run() error {
 	}
 
 	pollCount := 0
-	metrics := a.MetricsProvider.ReadMetrics()
+	gauges, _ := a.MetricsProvider.ReadMetrics()
 
 	ticker := time.NewTicker(time.Second)
 	defer ticker.Stop()
@@ -73,21 +73,21 @@ func (a *App) Run() error {
 			pollCount = 0
 		case <-pollTicker.C:
 			pollCount++
-			metrics = a.MetricsProvider.ReadMetrics()
+			gauges, _ = a.MetricsProvider.ReadMetrics()
 		case <-reportTicker.C:
-			err := a.Consumer.SendRuntimeGauge(metrics)
+			err := a.Consumer.SendRuntimeGauge(gauges)
 			if err != nil {
-				return err
+				return fmt.Errorf("failed to send gauges %w", err)
 			}
 
 			err = a.Consumer.SendCounter("PollCount", int64(pollCount))
 			if err != nil {
-				return err
+				return fmt.Errorf("failed to send count %w", err)
 			}
 
 			err = a.Consumer.SendGauge("RandomValue", rand.Float64())
 			if err != nil {
-				return err
+				return fmt.Errorf("failed to send random value %w", err)
 			}
 		}
 	}

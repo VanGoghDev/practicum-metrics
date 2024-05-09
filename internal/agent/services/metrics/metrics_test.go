@@ -17,8 +17,8 @@ func TestReadMetrics(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			mp := &MetricsProvider{}
-			metricsMap := mp.ReadMetrics()
-			assert.NotEmpty(t, *metricsMap)
+			metricsMap, _ := mp.ReadMetrics()
+			assert.NotEmpty(t, metricsMap)
 		})
 	}
 }

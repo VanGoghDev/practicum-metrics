@@ -20,26 +20,31 @@ type MetricsProvider interface {
 	Counter(name string) (counter models.Counter, err error)
 }
 
+const (
+	internalErrMsg = "Internal error"
+)
+
 func MetricsHandler(s MetricsProvider) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		gauges, err := s.Gauges()
+		errMsg := fmt.Sprintf("failed to fetch metrics: %v", err)
 
 		if err != nil {
-			log.Printf("failed to fetch metrics: %v", err)
-			http.Error(w, "Internal error", http.StatusInternalServerError)
+			log.Println(errMsg)
+			http.Error(w, internalErrMsg, http.StatusInternalServerError)
 			return
 		}
 		counters, err := s.Counters()
 		if err != nil {
-			log.Printf("failed to fetch metrics: %v", err)
-			http.Error(w, "Internal error", http.StatusInternalServerError)
+			log.Println(errMsg)
+			http.Error(w, internalErrMsg, http.StatusInternalServerError)
 			return
 		}
 
 		for _, g := range gauges {
 			_, err = fmt.Fprintf(w, "%s: %f \n", g.Name, g.Value)
 			if err != nil {
-				log.Printf("failed to fetch metrics: %v", err)
+				log.Println(errMsg)
 				http.Error(w, "", http.StatusInternalServerError)
 				break
 			}
@@ -48,7 +53,7 @@ func MetricsHandler(s MetricsProvider) http.HandlerFunc {
 		for _, c := range counters {
 			_, err = fmt.Fprintf(w, "%s: %d \n", c.Name, c.Value)
 			if err != nil {
-				log.Printf("failed to fetch metrics: %v", err)
+				log.Println(errMsg)
 				http.Error(w, "", http.StatusInternalServerError)
 				break
 			}
@@ -81,12 +86,12 @@ func MetricHandler(s MetricsProvider) http.HandlerFunc {
 						http.Error(w, "Not found", http.StatusNotFound)
 						return
 					}
-					http.Error(w, "Internal error", http.StatusInternalServerError)
+					http.Error(w, internalErrMsg, http.StatusInternalServerError)
 					return
 				}
 				_, err = fmt.Fprintf(w, "%d", counter.Value)
 				if err != nil {
-					http.Error(w, "Internal error", http.StatusInternalServerError)
+					http.Error(w, internalErrMsg, http.StatusInternalServerError)
 					return
 				}
 				return
@@ -100,13 +105,13 @@ func MetricHandler(s MetricsProvider) http.HandlerFunc {
 						return
 					}
 					log.Printf("failed to fetch gauge: %v", err)
-					http.Error(w, "Internal error", http.StatusInternalServerError)
+					http.Error(w, internalErrMsg, http.StatusInternalServerError)
 					return
 				}
 				_, err = fmt.Fprintf(w, "%s", strconv.FormatFloat(gauge.Value, 'f', -1, 64))
 				if err != nil {
 					log.Printf("failed to fetch gauge: %v", err)
-					http.Error(w, "Internal error", http.StatusInternalServerError)
+					http.Error(w, internalErrMsg, http.StatusInternalServerError)
 					return
 				}
 				return

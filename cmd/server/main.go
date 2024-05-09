@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"net/http"
 
@@ -33,5 +34,6 @@ func run() error {
 	router := chirouter.BuildRouter(&s, &s)
 
 	log.Printf("Server start and running on port %s \n", cfg.Address)
-	return http.ListenAndServe(cfg.Address, router)
+	err = http.ListenAndServe(cfg.Address, router)
+	return fmt.Errorf("failed to serve: %w", err)
 }

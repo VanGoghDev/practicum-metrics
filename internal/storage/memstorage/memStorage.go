@@ -40,11 +40,7 @@ func (s *MemStorage) SaveCount(name string, value int64) (err error) {
 		return ErrCountersTableNil
 	}
 
-	if _, ok := s.CountersM[name]; ok {
-		s.CountersM[name] = s.CountersM[name] + value
-	} else {
-		s.CountersM[name] = value
-	}
+	s.CountersM[name] += value
 	return nil
 }
 
