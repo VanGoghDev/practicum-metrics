@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/VanGoghDev/practicum-metrics/internal/agent/config"
-	server "github.com/VanGoghDev/practicum-metrics/internal/agent/services/consumer/http"
+	httpConsumer "github.com/VanGoghDev/practicum-metrics/internal/agent/services/consumer"
 	"github.com/VanGoghDev/practicum-metrics/internal/agent/services/metrics"
 )
 
@@ -17,9 +17,15 @@ var (
 	ErrMetricsProviderNil = errors.New("metrics provider is not initialized")
 )
 
+type ServerConsumer interface {
+	SendRuntimeGauge(metrics map[string]any) error
+	SendCounter(name string, value int64) error
+	SendGauge(name string, value float64) error
+}
+
 type App struct {
-	Consumer        *server.ServerConsumer
-	MetricsProvider *metrics.MetricsProvider
+	Consumer        ServerConsumer
+	MetricsProvider httpConsumer.MetricsProvider
 
 	reportInterval time.Duration
 	pollInterval   time.Duration
@@ -27,7 +33,7 @@ type App struct {
 
 func New(cfg *config.Config) *App {
 	metricsService := metrics.New()
-	consumer := server.New(metricsService, &http.Client{}, cfg.Address)
+	consumer := httpConsumer.New(metricsService, &http.Client{}, cfg.Address)
 
 	return &App{
 		Consumer:        consumer,
@@ -39,7 +45,7 @@ func New(cfg *config.Config) *App {
 
 func (a *App) RunApp() error {
 	if err := a.Run(); err != nil {
-		return err
+		return fmt.Errorf("failed to run app %w", err)
 	}
 	return nil
 }
@@ -55,12 +61,14 @@ func (a *App) Run() error {
 	}
 
 	pollCount := 0
-	gauges, _ := a.MetricsProvider.ReadMetrics()
+	gauges, err := a.MetricsProvider.ReadMetrics()
+	if err != nil {
+		return fmt.Errorf("failed to read metrics %s: %w", op, err)
+	}
 
 	ticker := time.NewTicker(time.Second)
 	defer ticker.Stop()
 
-	sent := make(chan string)
 	pollTicker := time.NewTicker(a.pollInterval)
 	defer pollTicker.Stop()
 
@@ -69,13 +77,12 @@ func (a *App) Run() error {
 
 	for {
 		select {
-		case <-sent:
-			pollCount = 0
 		case <-pollTicker.C:
 			pollCount++
 			gauges, _ = a.MetricsProvider.ReadMetrics()
 		case <-reportTicker.C:
 			err := a.Consumer.SendRuntimeGauge(gauges)
+			pollCount = 0
 			if err != nil {
 				return fmt.Errorf("failed to send gauges %w", err)
 			}

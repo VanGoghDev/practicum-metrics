@@ -1,6 +1,6 @@
 module github.com/VanGoghDev/practicum-metrics
 
-go 1.21.9
+go 1.22.3
 
 require (
 	github.com/go-chi/chi v1.5.5

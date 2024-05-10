@@ -6,7 +6,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/VanGoghDev/practicum-metrics/internal/server/handlers/mocks"
+	"github.com/VanGoghDev/practicum-metrics/internal/domain/models"
+	"github.com/VanGoghDev/practicum-metrics/internal/storage/memstorage"
 	"github.com/go-chi/chi"
 	"github.com/go-resty/resty/v2"
 	"github.com/stretchr/testify/assert"
@@ -19,6 +20,7 @@ func TestUpdateHandler(t *testing.T) {
 	}
 	tests := []struct {
 		name    string
+		gauge   models.Gauge
 		request string
 		params  map[string]string
 		want    want
@@ -30,6 +32,10 @@ func TestUpdateHandler(t *testing.T) {
 				"type":  "gauge",
 				"name":  "test",
 				"value": "1",
+			},
+			gauge: models.Gauge{
+				Name:  "test",
+				Value: 1,
 			},
 			want: want{
 				contentType: "text/plain; charset=utf-8",
@@ -89,13 +95,17 @@ func TestUpdateHandler(t *testing.T) {
 			},
 		},
 	}
-	r := chi.NewRouter()
-	r.HandleFunc(`/update/{type}/{name}/{value}`, UpdateHandler(&mocks.MemStorageMock{}))
-	srv := httptest.NewServer(r)
-	defer srv.Close()
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			r := chi.NewRouter()
+			r.HandleFunc(`/update/{type}/{name}/{value}`, UpdateHandler(&memstorage.MemStorage{
+				GaugesM: map[string]float64{
+					tt.gauge.Name: tt.gauge.Value,
+				},
+			}))
+			srv := httptest.NewServer(r)
+			defer srv.Close()
 			req := resty.New().R().SetPathParams(tt.params)
 			req.Method = http.MethodPost
 			req.URL = fmt.Sprintf("%s/%s", srv.URL, "update/{type}/{name}/{value}")
@@ -104,9 +114,6 @@ func TestUpdateHandler(t *testing.T) {
 			assert.Empty(t, err)
 			assert.Equal(t, tt.want.statusCode, resp.StatusCode())
 			assert.Equal(t, tt.want.contentType, resp.Header().Get("Content-Type"))
-
-			// err := resp.Body.Close()
-			// require.NoError(t, err)
 		})
 	}
 }

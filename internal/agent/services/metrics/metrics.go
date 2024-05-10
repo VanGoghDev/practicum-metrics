@@ -18,12 +18,15 @@ func (mp *MetricsProvider) ReadMetrics() (map[string]any, error) {
 
 	runtime.ReadMemStats(m)
 
-	jM, _ := json.Marshal(m)
+	jM, err := json.Marshal(m)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal jsoin %w", err)
+	}
 
 	metricsMap := make(map[string]any)
-	err := json.Unmarshal(jM, &metricsMap)
+	err = json.Unmarshal(jM, &metricsMap)
 	if err != nil {
-		return nil, fmt.Errorf("%w", err)
+		return nil, fmt.Errorf("failed to unmarshal json %w", err)
 	}
 	return metricsMap, nil
 }

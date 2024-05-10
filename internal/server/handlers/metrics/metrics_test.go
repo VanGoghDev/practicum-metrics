@@ -9,8 +9,8 @@ import (
 	"github.com/go-resty/resty/v2"
 	"github.com/stretchr/testify/assert"
 
-	"github.com/VanGoghDev/practicum-metrics/internal/server/handlers/mocks"
 	"github.com/VanGoghDev/practicum-metrics/internal/server/routers/chirouter"
+	"github.com/VanGoghDev/practicum-metrics/internal/storage/memstorage"
 )
 
 func TestMetricHandler(t *testing.T) {
@@ -35,6 +35,7 @@ func TestMetricHandler(t *testing.T) {
 			gaugesM: map[string]float64{
 				"test": 200,
 			},
+			countersM: map[string]int64{},
 			want: want{
 				statusCode: 200,
 				value:      "200",
@@ -61,7 +62,7 @@ func TestMetricHandler(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			r := chirouter.BuildRouter(nil, &mocks.MemStorageMock{
+			r := chirouter.BuildRouter(nil, &memstorage.MemStorage{
 				GaugesM:   tt.gaugesM,
 				CountersM: tt.countersM,
 			})

@@ -12,7 +12,7 @@ import (
 
 func main() {
 	if err := run(); err != nil {
-		panic(err)
+		log.Fatal("failed to run app %w", err)
 	}
 }
 
@@ -20,14 +20,14 @@ func run() error {
 	// config
 	cfg, err := config.Load()
 	if err != nil {
-		log.Fatal(err)
+		return fmt.Errorf("failed to load config %w", err)
 	}
 	// logger
 
 	// storage
 	s, err := memStorage.New()
 	if err != nil {
-		log.Fatal(err)
+		return fmt.Errorf("failed to init storage %w", err)
 	}
 
 	// router

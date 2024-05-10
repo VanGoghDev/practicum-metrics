@@ -91,6 +91,7 @@ func MetricHandler(s MetricsProvider) http.HandlerFunc {
 				}
 				_, err = fmt.Fprintf(w, "%d", counter.Value)
 				if err != nil {
+					log.Printf("failed to fetch counter: %v", err)
 					http.Error(w, internalErrMsg, http.StatusInternalServerError)
 					return
 				}

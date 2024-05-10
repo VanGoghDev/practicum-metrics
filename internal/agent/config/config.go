@@ -3,7 +3,6 @@ package config
 import (
 	"flag"
 	"fmt"
-	"log"
 	"time"
 
 	"github.com/caarlos0/env"
@@ -24,8 +23,7 @@ func Load() (config *Config, err error) {
 	cfg := Config{}
 
 	if err := env.Parse(&cfg); err != nil {
-		log.Println("Failed to parse config")
-		return nil, fmt.Errorf("failed to load config %w", err)
+		return nil, fmt.Errorf("failed to parse config %w", err)
 	}
 
 	var flagAddress string
