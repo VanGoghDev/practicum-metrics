@@ -5,11 +5,11 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"strconv"
 
 	"github.com/VanGoghDev/practicum-metrics/internal/domain/models"
 	"github.com/VanGoghDev/practicum-metrics/internal/server/handlers"
 	"github.com/VanGoghDev/practicum-metrics/internal/storage/memstorage"
+	"github.com/VanGoghDev/practicum-metrics/internal/util/converter"
 	"github.com/go-chi/chi"
 )
 
@@ -41,7 +41,14 @@ func MetricsHandler(s MetricsProvider) http.HandlerFunc {
 		}
 
 		for _, g := range gauges {
-			_, err = fmt.Fprintf(w, "%s: %f \n", g.Name, g.Value)
+			sV, err := converter.Str(g.Value)
+			if err != nil {
+				log.Printf("failed to convert gauge value to string %v", err)
+				http.Error(w, "", http.StatusInternalServerError)
+				break
+			}
+
+			_, err = fmt.Fprintf(w, "%s: %s \n", g.Name, sV)
 			if err != nil {
 				log.Printf("failed to print gauges %v", err)
 				http.Error(w, "", http.StatusInternalServerError)
@@ -50,7 +57,14 @@ func MetricsHandler(s MetricsProvider) http.HandlerFunc {
 		}
 
 		for _, c := range counters {
-			_, err = fmt.Fprintf(w, "%s: %d \n", c.Name, c.Value)
+			sV, err := converter.Str(c.Value)
+			if err != nil {
+				log.Printf("failed to convert counter value to string %v", err)
+				http.Error(w, "", http.StatusInternalServerError)
+				break
+			}
+
+			_, err = fmt.Fprintf(w, "%s: %s \n", c.Name, sV)
 			if err != nil {
 				log.Printf("failed to print counters %v", err)
 				http.Error(w, "", http.StatusInternalServerError)
@@ -88,7 +102,14 @@ func MetricHandler(s MetricsProvider) http.HandlerFunc {
 					http.Error(w, internalErrMsg, http.StatusInternalServerError)
 					return
 				}
-				_, err = fmt.Fprintf(w, "%d", counter.Value)
+				sV, err := converter.Str(counter.Value)
+				if err != nil {
+					log.Printf("failed to convert counter value to string: %v", err)
+					http.Error(w, internalErrMsg, http.StatusInternalServerError)
+					return
+				}
+
+				_, err = fmt.Fprintf(w, "%s", sV)
 				if err != nil {
 					log.Printf("failed to fetch counter: %v", err)
 					http.Error(w, internalErrMsg, http.StatusInternalServerError)
@@ -108,7 +129,13 @@ func MetricHandler(s MetricsProvider) http.HandlerFunc {
 					http.Error(w, internalErrMsg, http.StatusInternalServerError)
 					return
 				}
-				_, err = fmt.Fprintf(w, "%s", strconv.FormatFloat(gauge.Value, 'f', -1, 64))
+				sV, err := converter.Str(gauge.Value)
+				if err != nil {
+					log.Printf("failed to convert gauge value to string: %v", err)
+					http.Error(w, internalErrMsg, http.StatusInternalServerError)
+					return
+				}
+				_, err = fmt.Fprintf(w, "%s", sV)
 				if err != nil {
 					log.Printf("failed to fetch gauge: %v", err)
 					http.Error(w, internalErrMsg, http.StatusInternalServerError)

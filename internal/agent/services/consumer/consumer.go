@@ -7,7 +7,7 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/VanGoghDev/practicum-metrics/internal/agent/services/consumer/utils"
+	"github.com/VanGoghDev/practicum-metrics/internal/util/converter"
 )
 
 var (
@@ -39,9 +39,9 @@ func New(metricsProvider MetricsProvider, client HTTPClient, url string) *Server
 
 func (s *ServerConsumer) SendRuntimeGauge(metrics map[string]any) error {
 	for k, v := range metrics {
-		sV, err := utils.Str(v)
+		sV, err := converter.Str(v)
 		if err != nil {
-			if errors.Is(err, utils.ErrUnsupportedType) {
+			if errors.Is(err, converter.ErrUnsupportedType) {
 				continue
 			}
 			return fmt.Errorf("failed to parse gauge value %w", err)
@@ -56,14 +56,7 @@ func (s *ServerConsumer) SendRuntimeGauge(metrics map[string]any) error {
 		if err != nil {
 			return fmt.Errorf("failed to create request for gauge update %w", err)
 		}
-		resp, err := s.client.Do(request)
-		if err != nil {
-			return fmt.Errorf("failed to save gauges on server %w", err)
-		}
-		err = resp.Body.Close()
-		if err != nil {
-			return fmt.Errorf("failed to close body %w", err)
-		}
+		return s.sendRequest(request)
 	}
 
 	return nil
@@ -77,7 +70,7 @@ func (s *ServerConsumer) SendCounter(name string, value int64) error {
 		return ErrValueIsIncorrect
 	}
 
-	strValue, err := utils.Str(value)
+	strValue, err := converter.Str(value)
 	if err != nil {
 		return fmt.Errorf("failed to parse counter value %w", err)
 	}
@@ -101,7 +94,7 @@ func (s *ServerConsumer) SendGauge(name string, value float64) error {
 		return ErrValueIsIncorrect
 	}
 
-	strValue, err := utils.Str(value)
+	strValue, err := converter.Str(value)
 	if err != nil {
 		return fmt.Errorf("failed to parse gauge value %w", err)
 	}
@@ -120,15 +113,19 @@ func (s *ServerConsumer) SendGauge(name string, value float64) error {
 func (s *ServerConsumer) sendRequest(request *http.Request) error {
 	resp, err := s.client.Do(request)
 	if err != nil {
+		log.Printf("unexpected error %v", err)
 		return fmt.Errorf("failed to save gauge on server %w", err)
 	}
-	defer dclose(resp.Body)
+	defer func() {
+		err = dclose(resp.Body)
+	}()
 
-	return nil
+	return err
 }
 
-func dclose(c io.Closer) {
+func dclose(c io.Closer) error {
 	if err := c.Close(); err != nil {
-		log.Fatal(err)
+		return fmt.Errorf("failed to close %w", err)
 	}
+	return nil
 }
