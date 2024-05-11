@@ -3,7 +3,10 @@ package consumer
 import (
 	"errors"
 	"fmt"
+	"io"
+	"log"
 	"net/http"
+	"strconv"
 )
 
 var (
@@ -38,7 +41,8 @@ func (s *ServerConsumer) SendRuntimeGauge(metrics map[string]any) error {
 		request, err := http.NewRequest(
 			http.MethodPost,
 			fmt.Sprintf("http://%s/update/gauge/%v/%v", s.url, k, v),
-			http.NoBody)
+			http.NoBody,
+		)
 
 		if err != nil {
 			return fmt.Errorf("failed to create request for gauge update %w", err)
@@ -63,9 +67,10 @@ func (s *ServerConsumer) SendCounter(name string, value int64) error {
 	if value < 0 {
 		return ErrValueIsIncorrect
 	}
+	strValue := strconv.FormatInt(value, 10)
 	request, err := http.NewRequest(
 		http.MethodPost,
-		fmt.Sprintf("http://%s/update/counter/%v/%v", s.url, name, value),
+		fmt.Sprintf("http://%s/update/counter/%v/%v", s.url, name, strValue),
 		http.NoBody)
 
 	if err != nil {
@@ -81,9 +86,10 @@ func (s *ServerConsumer) SendGauge(name string, value float64) error {
 	if value < 0 {
 		return ErrValueIsIncorrect
 	}
+	strValue := strconv.FormatFloat(value, 'f', -1, 64)
 	request, err := http.NewRequest(
 		http.MethodPost,
-		fmt.Sprintf("http://%s/update/gauge/%v/%v", s.url, name, value),
+		fmt.Sprintf("http://%s/update/gauge/%v/%v", s.url, name, strValue),
 		http.NoBody)
 
 	if err != nil {
@@ -97,10 +103,13 @@ func (s *ServerConsumer) sendRequest(request *http.Request) error {
 	if err != nil {
 		return fmt.Errorf("failed to save gauge on server %w", err)
 	}
-	err = resp.Body.Close()
-	if err != nil {
-		return fmt.Errorf("failed to close body %w", err)
-	}
+	defer dclose(resp.Body)
 
 	return nil
+}
+
+func dclose(c io.Closer) {
+	if err := c.Close(); err != nil {
+		log.Fatal(err)
+	}
 }

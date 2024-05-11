@@ -7,7 +7,7 @@ import (
 
 	"github.com/VanGoghDev/practicum-metrics/internal/server/config"
 	"github.com/VanGoghDev/practicum-metrics/internal/server/routers/chirouter"
-	memStorage "github.com/VanGoghDev/practicum-metrics/internal/storage/memstorage"
+	"github.com/VanGoghDev/practicum-metrics/internal/storage/memstorage"
 )
 
 func main() {
@@ -25,7 +25,7 @@ func run() error {
 	// logger
 
 	// storage
-	s, err := memStorage.New()
+	s, err := memstorage.New()
 	if err != nil {
 		return fmt.Errorf("failed to init storage %w", err)
 	}

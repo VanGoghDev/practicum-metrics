@@ -20,7 +20,7 @@ func (mp *MetricsProvider) ReadMetrics() (map[string]any, error) {
 
 	jM, err := json.Marshal(m)
 	if err != nil {
-		return nil, fmt.Errorf("failed to marshal jsoin %w", err)
+		return nil, fmt.Errorf("failed to marshal json %w", err)
 	}
 
 	metricsMap := make(map[string]any)

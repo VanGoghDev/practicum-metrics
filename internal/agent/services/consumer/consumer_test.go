@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"testing"
 
-	httpMock "github.com/VanGoghDev/practicum-metrics/internal/agent/http/mocks"
+	"github.com/VanGoghDev/practicum-metrics/internal/agent/http/mocks"
 	"github.com/VanGoghDev/practicum-metrics/internal/agent/services/metrics"
 	"github.com/stretchr/testify/assert"
 )
@@ -19,13 +19,13 @@ type args struct {
 func tests() []struct {
 	name         string
 	args         args
-	mockHTTPFunc httpMock.GetDoFuncType
+	mockHTTPFunc mocks.GetDoFuncType
 	err          error
 } {
 	tests := []struct {
 		name         string
 		args         args
-		mockHTTPFunc httpMock.GetDoFuncType
+		mockHTTPFunc mocks.GetDoFuncType
 		err          error
 	}{
 		{
@@ -80,7 +80,7 @@ func TestSendGauge(t *testing.T) {
 			metricsProviderMock := &metrics.MetricsProvider{}
 			s := &ServerConsumer{
 				metricsProvider: metricsProviderMock,
-				client: &httpMock.MockClient{
+				client: &mocks.MockClient{
 					DoFunc: tt.mockHTTPFunc,
 				},
 			}
@@ -96,7 +96,7 @@ func TestSendCounter(t *testing.T) {
 			metricsProviderMock := &metrics.MetricsProvider{}
 			s := &ServerConsumer{
 				metricsProvider: metricsProviderMock,
-				client: &httpMock.MockClient{
+				client: &mocks.MockClient{
 					DoFunc: tt.mockHTTPFunc,
 				},
 			}

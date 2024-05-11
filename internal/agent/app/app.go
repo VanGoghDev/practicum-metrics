@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/VanGoghDev/practicum-metrics/internal/agent/config"
-	httpConsumer "github.com/VanGoghDev/practicum-metrics/internal/agent/services/consumer"
+	"github.com/VanGoghDev/practicum-metrics/internal/agent/services/consumer"
 	"github.com/VanGoghDev/practicum-metrics/internal/agent/services/metrics"
 )
 
@@ -25,7 +25,7 @@ type ServerConsumer interface {
 
 type App struct {
 	Consumer        ServerConsumer
-	MetricsProvider httpConsumer.MetricsProvider
+	MetricsProvider consumer.MetricsProvider
 
 	reportInterval time.Duration
 	pollInterval   time.Duration
@@ -33,10 +33,10 @@ type App struct {
 
 func New(cfg *config.Config) *App {
 	metricsService := metrics.New()
-	consumer := httpConsumer.New(metricsService, &http.Client{}, cfg.Address)
+	csmr := consumer.New(metricsService, &http.Client{}, cfg.Address)
 
 	return &App{
-		Consumer:        consumer,
+		Consumer:        csmr,
 		MetricsProvider: metricsService,
 		reportInterval:  cfg.ReportInterval,
 		pollInterval:    cfg.PollInterval,
@@ -66,9 +66,6 @@ func (a *App) Run() error {
 		return fmt.Errorf("failed to read metrics %s: %w", op, err)
 	}
 
-	ticker := time.NewTicker(time.Second)
-	defer ticker.Stop()
-
 	pollTicker := time.NewTicker(a.pollInterval)
 	defer pollTicker.Stop()
 
@@ -79,10 +76,12 @@ func (a *App) Run() error {
 		select {
 		case <-pollTicker.C:
 			pollCount++
-			gauges, _ = a.MetricsProvider.ReadMetrics()
+			gauges, err = a.MetricsProvider.ReadMetrics()
+			if err != nil {
+				return fmt.Errorf("failed to read metrics %w", err)
+			}
 		case <-reportTicker.C:
 			err := a.Consumer.SendRuntimeGauge(gauges)
-			pollCount = 0
 			if err != nil {
 				return fmt.Errorf("failed to send gauges %w", err)
 			}
@@ -91,6 +90,7 @@ func (a *App) Run() error {
 			if err != nil {
 				return fmt.Errorf("failed to send count %w", err)
 			}
+			pollCount = 0
 
 			err = a.Consumer.SendGauge("RandomValue", rand.Float64())
 			if err != nil {
