@@ -6,7 +6,8 @@ import (
 	"io"
 	"log"
 	"net/http"
-	"strconv"
+
+	"github.com/VanGoghDev/practicum-metrics/internal/agent/services/consumer/utils"
 )
 
 var (
@@ -38,9 +39,17 @@ func New(metricsProvider MetricsProvider, client HTTPClient, url string) *Server
 
 func (s *ServerConsumer) SendRuntimeGauge(metrics map[string]any) error {
 	for k, v := range metrics {
+		sV, err := utils.Str(v)
+		if err != nil {
+			if errors.Is(err, utils.ErrUnsupportedType) {
+				continue
+			}
+			return fmt.Errorf("failed to parse gauge value %w", err)
+		}
+
 		request, err := http.NewRequest(
 			http.MethodPost,
-			fmt.Sprintf("http://%s/update/gauge/%v/%v", s.url, k, v),
+			fmt.Sprintf("http://%s/update/gauge/%v/%v", s.url, k, sV),
 			http.NoBody,
 		)
 
@@ -67,7 +76,12 @@ func (s *ServerConsumer) SendCounter(name string, value int64) error {
 	if value < 0 {
 		return ErrValueIsIncorrect
 	}
-	strValue := strconv.FormatInt(value, 10)
+
+	strValue, err := utils.Str(value)
+	if err != nil {
+		return fmt.Errorf("failed to parse counter value %w", err)
+	}
+
 	request, err := http.NewRequest(
 		http.MethodPost,
 		fmt.Sprintf("http://%s/update/counter/%v/%v", s.url, name, strValue),
@@ -86,7 +100,12 @@ func (s *ServerConsumer) SendGauge(name string, value float64) error {
 	if value < 0 {
 		return ErrValueIsIncorrect
 	}
-	strValue := strconv.FormatFloat(value, 'f', -1, 64)
+
+	strValue, err := utils.Str(value)
+	if err != nil {
+		return fmt.Errorf("failed to parse gauge value %w", err)
+	}
+
 	request, err := http.NewRequest(
 		http.MethodPost,
 		fmt.Sprintf("http://%s/update/gauge/%v/%v", s.url, name, strValue),
