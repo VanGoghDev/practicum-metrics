@@ -3,6 +3,7 @@ package app
 import (
 	"errors"
 	"fmt"
+	"log"
 	"math/rand"
 	"net/http"
 	"time"
@@ -83,6 +84,10 @@ func (a *App) Run() error {
 		case <-reportTicker.C:
 			err := a.Consumer.SendRuntimeGauge(gauges)
 			if err != nil {
+				if errors.Is(err, consumer.ErrServiceUnavailable) || errors.Is(err, consumer.ErrServiceNotFound) {
+					log.Printf("failed to send metrics to server: %v", err)
+					continue
+				}
 				return fmt.Errorf("failed to send gauges %w", err)
 			}
 
