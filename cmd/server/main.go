@@ -24,7 +24,7 @@ func run() error {
 		return fmt.Errorf("failed to load config %w", err)
 	}
 	// logger
-	zlog, err := logger.New("Info")
+	zlog, err := logger.New(cfg.Loglevel)
 	if err != nil {
 		return fmt.Errorf("failed to init logger %w", err)
 	}
@@ -38,7 +38,6 @@ func run() error {
 	// router
 	router := chirouter.BuildRouter(&s, &s, zlog)
 
-	log.Printf("Server start and running on port %s \n", cfg.Address)
 	err = http.ListenAndServe(cfg.Address, router)
 	return fmt.Errorf("failed to serve: %w", err)
 }

@@ -8,7 +8,8 @@ import (
 )
 
 type Config struct {
-	Address string `env:"ADDRESS"`
+	Address  string `env:"ADDRESS"`
+	Loglevel string `env:"LOGLVL"`
 }
 
 func Load() (config *Config, err error) {
@@ -19,6 +20,10 @@ func Load() (config *Config, err error) {
 
 	if cfg.Address == "" {
 		flag.StringVar(&cfg.Address, "a", "localhost:8080", "address and port to run server")
+	}
+
+	if cfg.Loglevel == "" {
+		flag.StringVar(&cfg.Loglevel, "lvl", "info", "log level")
 	}
 
 	flag.Parse()
