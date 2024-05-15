@@ -11,10 +11,8 @@ import (
 )
 
 var (
-	ErrNameIsEmpty        = errors.New("name is empty")
-	ErrValueIsIncorrect   = errors.New("value is incorrect")
-	ErrServiceUnavailable = errors.New("service is unavailable")
-	ErrServiceNotFound    = errors.New("service not found")
+	ErrNameIsEmpty      = errors.New("name is empty")
+	ErrValueIsIncorrect = errors.New("value is incorrect")
 )
 
 type HTTPClient interface {
@@ -118,11 +116,8 @@ func (s *ServerConsumer) sendRequest(request *http.Request) error {
 		log.Printf("unexpected error %v", err)
 		return fmt.Errorf("failed to save gauge on server %w", err)
 	}
-	if resp.StatusCode == http.StatusServiceUnavailable {
-		return ErrServiceUnavailable
-	}
-	if resp.StatusCode == http.StatusNotFound {
-		return ErrServiceNotFound
+	if resp.StatusCode == http.StatusServiceUnavailable || resp.StatusCode == http.StatusNotFound {
+		return fmt.Errorf("server returned unexpected status code: %d", resp.StatusCode)
 	}
 	defer func() {
 		err = dclose(resp.Body)
