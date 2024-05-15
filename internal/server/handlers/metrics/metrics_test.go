@@ -65,7 +65,7 @@ func TestMetricHandler(t *testing.T) {
 			r := chirouter.BuildRouter(nil, &memstorage.MemStorage{
 				GaugesM:   tt.gaugesM,
 				CountersM: tt.countersM,
-			})
+			}, nil)
 			srv := httptest.NewServer(r)
 			defer srv.Close()
 

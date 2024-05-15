@@ -6,6 +6,7 @@ import (
 	"net/http"
 
 	"github.com/VanGoghDev/practicum-metrics/internal/server/config"
+	"github.com/VanGoghDev/practicum-metrics/internal/server/logger"
 	"github.com/VanGoghDev/practicum-metrics/internal/server/routers/chirouter"
 	"github.com/VanGoghDev/practicum-metrics/internal/storage/memstorage"
 )
@@ -23,7 +24,11 @@ func run() error {
 		return fmt.Errorf("failed to load config %w", err)
 	}
 	// logger
-
+	zlog, err := logger.New("Info")
+	if err != nil {
+		return fmt.Errorf("failed to init logger %w", err)
+	}
+	zlog.Info("Logger init")
 	// storage
 	s, err := memstorage.New()
 	if err != nil {
@@ -31,7 +36,7 @@ func run() error {
 	}
 
 	// router
-	router := chirouter.BuildRouter(&s, &s)
+	router := chirouter.BuildRouter(&s, &s, zlog)
 
 	log.Printf("Server start and running on port %s \n", cfg.Address)
 	err = http.ListenAndServe(cfg.Address, router)
