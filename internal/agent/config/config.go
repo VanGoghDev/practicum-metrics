@@ -12,6 +12,7 @@ type Config struct {
 	Address        string        `env:"ADDRESS"`
 	ReportInterval time.Duration `env:"REPORTINTERVAL"`
 	PollInterval   time.Duration `env:"POLLINTERVAL"`
+	Loglevel       string        `env:"LOGLVL"`
 }
 
 const (
@@ -30,10 +31,12 @@ func Load() (config *Config, err error) {
 	flag.StringVar(&flagAddress, "a", "localhost:8080", "address and port to run server")
 
 	var reportInteval, pollInterval int64
+	var logLevel string
 	flag.Int64Var(&reportInteval,
 		"r", defaultReportInterval,
 		"report interval (interval of requests to consumer, in seconds)")
 	flag.Int64Var(&pollInterval, "p", defaultPollInterval, "poll interval (interval of metrics fetch, in seconds)")
+	flag.StringVar(&logLevel, "lvl", "info", "log level")
 
 	flag.Parse()
 
@@ -47,6 +50,10 @@ func Load() (config *Config, err error) {
 
 	if cfg.PollInterval == 0 {
 		cfg.PollInterval = time.Duration(pollInterval) * time.Second
+	}
+
+	if cfg.Loglevel == "" {
+		cfg.Loglevel = logLevel
 	}
 
 	return &cfg, nil

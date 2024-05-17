@@ -8,6 +8,7 @@ import (
 
 	"github.com/VanGoghDev/practicum-metrics/internal/agent/http/mocks"
 	"github.com/VanGoghDev/practicum-metrics/internal/agent/services/metrics"
+	"github.com/VanGoghDev/practicum-metrics/internal/domain/models"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -54,7 +55,7 @@ func tests() []struct {
 					Body:       io.NopCloser(bytes.NewReader([]byte(""))),
 				}, nil
 			},
-			err: ErrNameIsEmpty,
+			err: nil,
 		},
 		{
 			name: "wrong value",
@@ -68,7 +69,7 @@ func tests() []struct {
 					Body:       io.NopCloser(bytes.NewReader([]byte(""))),
 				}, nil
 			},
-			err: ErrValueIsIncorrect,
+			err: nil,
 		},
 	}
 	return tests
@@ -84,7 +85,12 @@ func TestSendGauge(t *testing.T) {
 					DoFunc: tt.mockHTTPFunc,
 				},
 			}
-			err := s.SendGauge(tt.args.name, tt.args.value)
+			metricsV := make([]*models.Metrics, 10)
+			metricsV[0] = &models.Metrics{
+				ID:    tt.args.name,
+				Value: &tt.args.value,
+			}
+			err := s.SendMetrics(metricsV)
 			assert.Equal(t, tt.err, err)
 		})
 	}
@@ -100,7 +106,13 @@ func TestSendCounter(t *testing.T) {
 					DoFunc: tt.mockHTTPFunc,
 				},
 			}
-			err := s.SendCounter(tt.args.name, int64(tt.args.value))
+			metricsV := make([]*models.Metrics, 10)
+			val := int64(tt.args.value)
+			metricsV[0] = &models.Metrics{
+				ID:    tt.args.name,
+				Delta: &val,
+			}
+			err := s.SendMetrics(metricsV)
 			assert.Equal(t, tt.err, err)
 		})
 	}

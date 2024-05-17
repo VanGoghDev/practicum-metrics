@@ -22,7 +22,7 @@ func BuildRouter(s update.MetricsSaver, p metrics.MetricsProvider, log *zap.Logg
 	})
 
 	r.Route("/update", func(r chi.Router) {
-		r.Post("/{type}/{name}/{value}", update.UpdateHandler(s))
+		r.Post("/", update.UpdateHandler(s))
 	})
 
 	return r
