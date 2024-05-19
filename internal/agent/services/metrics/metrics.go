@@ -36,6 +36,8 @@ func New(log *zap.Logger) *MetricsProvider {
 		createMetric("Lookups", gaugeType),
 		createMetric("MCacheInuse", gaugeType),
 		createMetric("MCacheSys", gaugeType),
+		createMetric("MSpanSys", gaugeType),
+		createMetric("MSpanInuse", gaugeType),
 		createMetric("Mallocs", gaugeType),
 		createMetric("NextGC", gaugeType),
 		createMetric("NumForcedGC", gaugeType),

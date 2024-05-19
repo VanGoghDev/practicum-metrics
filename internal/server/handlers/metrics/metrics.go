@@ -83,6 +83,7 @@ func MetricsHandler(s MetricsProvider) http.HandlerFunc {
 
 func MetricHandler(s MetricsProvider) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
 		var req models.Metrics
 		dec := json.NewDecoder(r.Body)
 		if err := dec.Decode(&req); err != nil {
@@ -151,7 +152,6 @@ func MetricHandler(s MetricsProvider) http.HandlerFunc {
 				return
 			}
 		}
-		w.Header().Add("Content-Type", "application/json;charset=utf-8")
 	}
 }
 

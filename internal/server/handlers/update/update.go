@@ -22,6 +22,7 @@ const (
 
 func UpdateHandler(storage MetricsSaver) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
 		// logger.Log.Debug("decoding request")
 		var req models.Metrics
 		dec := json.NewDecoder(r.Body)
@@ -69,12 +70,13 @@ func UpdateHandler(storage MetricsSaver) http.HandlerFunc {
 			log.Printf("error encoding response %v", err)
 			return
 		}
-		w.Header().Add("Content-Type", "application/json; charset=utf-8")
 	}
 }
 
 func UpdateHandlerRouteParams(storage MetricsSaver) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Add("Content-Type", "text/plain; charset=utf-8")
+
 		// update/<ТИП_МЕТРИКИ>/<ИМЯ_МЕТРИКИ>/<ЗНАЧЕНИЕ_МЕТРИКИ>
 		mType := chi.URLParam(r, "type")
 		mName := chi.URLParam(r, "name")
@@ -117,6 +119,5 @@ func UpdateHandlerRouteParams(storage MetricsSaver) http.HandlerFunc {
 				return
 			}
 		}
-		w.Header().Add("Content-Type", "text/plain; charset=utf-8")
 	}
 }

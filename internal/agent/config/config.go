@@ -10,9 +10,9 @@ import (
 
 type Config struct {
 	Address        string        `env:"ADDRESS"`
+	Loglevel       string        `env:"LOGLVL"`
 	ReportInterval time.Duration `env:"REPORTINTERVAL"`
 	PollInterval   time.Duration `env:"POLLINTERVAL"`
-	Loglevel       string        `env:"LOGLVL"`
 }
 
 const (
