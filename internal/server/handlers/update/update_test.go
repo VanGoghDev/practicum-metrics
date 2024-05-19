@@ -1,4 +1,4 @@
-package update
+package update_test
 
 import (
 	"fmt"
@@ -7,8 +7,9 @@ import (
 	"testing"
 
 	"github.com/VanGoghDev/practicum-metrics/internal/domain/models"
+	"github.com/VanGoghDev/practicum-metrics/internal/server/logger"
+	"github.com/VanGoghDev/practicum-metrics/internal/server/routers/chirouter"
 	"github.com/VanGoghDev/practicum-metrics/internal/storage/memstorage"
-	"github.com/go-chi/chi"
 	"github.com/go-resty/resty/v2"
 	"github.com/stretchr/testify/assert"
 )
@@ -98,17 +99,15 @@ func TestUpdateHandler(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			r := chi.NewRouter()
-			r.HandleFunc(`/update/{type}/{name}/{value}`, UpdateHandler(&memstorage.MemStorage{
-				GaugesM: map[string]float64{
-					tt.gauge.Name: tt.gauge.Value,
-				},
-			}))
+			log, _ := logger.New("Info")
+			s, _ := memstorage.New()
+			r := chirouter.BuildRouter(&s, &s, log)
 			srv := httptest.NewServer(r)
 			defer srv.Close()
+
 			req := resty.New().R().SetPathParams(tt.params)
 			req.Method = http.MethodPost
-			req.URL = fmt.Sprintf("%s/%s", srv.URL, "update/{type}/{name}/{value}")
+			req.URL = fmt.Sprintf("%s/%s", srv.URL, tt.request)
 			resp, err := req.Send()
 
 			assert.Empty(t, err)
