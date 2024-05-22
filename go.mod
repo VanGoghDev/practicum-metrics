@@ -6,12 +6,10 @@ require (
 	github.com/go-chi/chi v1.5.5
 	github.com/go-resty/resty/v2 v2.12.0
 	github.com/stretchr/testify v1.9.0
+	go.uber.org/zap v1.27.0
 )
 
-require (
-	go.uber.org/multierr v1.10.0 // indirect
-	go.uber.org/zap v1.27.0 // indirect
-)
+require go.uber.org/multierr v1.10.0 // indirect
 
 require (
 	github.com/caarlos0/env v3.5.0+incompatible

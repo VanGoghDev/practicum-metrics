@@ -1,7 +1,10 @@
 package update_test
 
 import (
+	"bytes"
+	"compress/gzip"
 	"fmt"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -12,6 +15,7 @@ import (
 	"github.com/VanGoghDev/practicum-metrics/internal/storage/memstorage"
 	"github.com/go-resty/resty/v2"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestUpdateHandler(t *testing.T) {
@@ -115,4 +119,99 @@ func TestUpdateHandler(t *testing.T) {
 			assert.Equal(t, tt.want.contentType, resp.Header().Get("Content-Type"))
 		})
 	}
+}
+
+// ...
+
+func TestGzipCompression(t *testing.T) {
+	log, _ := logger.New("Info")
+	s, _ := memstorage.New()
+	s.GaugesM = map[string]float64{
+		"Alloc": 2.0,
+	}
+	r := chirouter.BuildRouter(&s, &s, log)
+	srv := httptest.NewServer(r)
+	defer srv.Close()
+
+	requestBody := `{
+		"id": "Alloc",
+		"type": "gauge",
+		"value": 2
+    }`
+
+	// ожидаемое содержимое тела ответа при успешном запросе
+	successBody := `{
+		"id": "Alloc",
+		"type": "gauge",
+		"value": 2
+    }`
+
+	t.Run("sends_gzip", func(t *testing.T) {
+		buf := bytes.NewBuffer(nil)
+		zb := gzip.NewWriter(buf)
+		_, err := zb.Write([]byte(requestBody))
+		require.NoError(t, err)
+		err = zb.Close()
+		require.NoError(t, err)
+
+		resp, err := resty.New().R().
+			SetDoNotParseResponse(true).
+			SetHeader("Content-Type", "application/json").
+			SetHeader("Content-Encoding", "gzip").
+			SetHeader("Accept-Encoding", "").
+			SetBody(buf).
+			Post(srv.URL + "/update")
+
+		require.NoError(t, err)
+		require.Equal(t, http.StatusOK, resp.StatusCode())
+
+		b, err := io.ReadAll(resp.RawBody())
+		require.NoError(t, err)
+		require.JSONEq(t, successBody, string(b))
+		require.Equal(t, resp.Header().Get("Accept-Encoding"), "")
+	})
+
+	t.Run("accepts_gzip", func(t *testing.T) {
+		buf := bytes.NewBufferString(requestBody)
+		r := httptest.NewRequest(http.MethodPost, srv.URL+"/value", buf)
+		r.RequestURI = ""
+		r.Header.Set("Accept-Encoding", "gzip")
+
+		resp, err := http.DefaultClient.Do(r)
+		require.NoError(t, err)
+		require.Equal(t, http.StatusOK, resp.StatusCode)
+
+		defer func() {
+			err = resp.Body.Close()
+			if err != nil {
+				require.Empty(t, err)
+			}
+		}()
+
+		zr, err := gzip.NewReader(resp.Body)
+		require.NoError(t, err)
+
+		b, err := io.ReadAll(zr)
+		require.NoError(t, err)
+		require.NotEmpty(t, b)
+		require.JSONEq(t, successBody, string(b))
+
+		// buf := bytes.NewBufferString(requestBody)
+
+		// resp, err := resty.New().R().
+		// 	SetDoNotParseResponse(true).
+		// 	SetHeader("Accept-Encoding", "gzip").
+		// 	SetBody(buf).
+		// 	Post(srv.URL + "/value")
+		// require.NoError(t, err)
+		// require.Equal(t, http.StatusOK, resp.StatusCode)
+
+		// zr, err := gzip.NewReader(resp.RawBody())
+		// require.NoError(t, err)
+
+		// b, err := io.ReadAll(zr)
+		// require.NoError(t, err)
+
+		// require.JSONEq(t, successBody, string(b))
+	})
 }

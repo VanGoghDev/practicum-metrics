@@ -33,6 +33,8 @@ const (
 
 func MetricsHandler(s MetricsProvider) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+
 		gauges, err := s.Gauges()
 		if err != nil {
 			log.Printf("failed to fetch gauges %v", err)
@@ -157,6 +159,8 @@ func MetricHandler(s MetricsProvider) http.HandlerFunc {
 
 func MetricHandlerRouterParams(s MetricsProvider) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+
 		// update/<ТИП_МЕТРИКИ>/<ИМЯ_МЕТРИКИ>
 		mType := chi.URLParam(r, "type")
 		mName := chi.URLParam(r, "name")

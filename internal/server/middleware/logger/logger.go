@@ -11,8 +11,6 @@ import (
 func New(log *zap.Logger) func(next http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		fn := func(w http.ResponseWriter, r *http.Request) {
-			log.Info("logger middleware enabled")
-
 			ww := middleware.NewWrapResponseWriter(w, r.ProtoMajor)
 
 			start := time.Now()
