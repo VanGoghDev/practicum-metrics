@@ -2,6 +2,7 @@ package memstorage
 
 import (
 	"errors"
+	"fmt"
 
 	"github.com/VanGoghDev/practicum-metrics/internal/domain/models"
 )
@@ -111,4 +112,43 @@ func (s *MemStorage) Counter(name string) (counter models.Counter, err error) {
 		}
 		return
 	}
+}
+
+func (s *MemStorage) GetMetrics() ([]*models.Metrics, error) {
+	metrics := make([]*models.Metrics, 0)
+	for k, v := range s.CountersM {
+		metrics = append(metrics, &models.Metrics{
+			ID:    k,
+			Delta: &v,
+			MType: "counter",
+		})
+	}
+
+	for k, v := range s.GaugesM {
+		metrics = append(metrics, &models.Metrics{
+			ID:    k,
+			Value: &v,
+			MType: "gauge",
+		})
+	}
+
+	return metrics, nil
+}
+
+func (s *MemStorage) SaveMetrics(metrics []*models.Metrics) error {
+	for _, v := range metrics {
+		switch v.MType {
+		case "gauge":
+			err := s.SaveGauge(v.ID, *v.Value)
+			if err != nil {
+				return fmt.Errorf("failed to save gauge: %w", err)
+			}
+		case "counter":
+			err := s.SaveCount(v.ID, *v.Delta)
+			if err != nil {
+				return fmt.Errorf("failed to save counter: %w", err)
+			}
+		}
+	}
+	return nil
 }
