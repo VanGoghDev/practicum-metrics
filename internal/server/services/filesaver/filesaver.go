@@ -13,6 +13,7 @@ import (
 type FileStorage interface {
 	Save(metrics []*models.Metrics) error
 	GetMetrics() ([]*models.Metrics, error)
+	Close() error
 }
 
 type MemStorage interface {
@@ -42,14 +43,19 @@ func New(cfg *config.Config, log *zap.Logger, mstrg MemStorage) (*FileSaver, err
 	}, nil
 }
 
-func (fs FileSaver) Run() {
+func (fs FileSaver) Run() error {
+	defer func() {
+		err := fs.filestrg.Close()
+		if err != nil {
+			_ = fmt.Errorf("FileSaver.Run: %w", err)
+		}
+	}()
 	if fs.restore {
 		err := fs.Restore()
 		if err != nil {
 			fs.logger.Warn(fmt.Sprintf("failed to restore metrics: %v", err))
 		}
 	}
-
 	storeTicker := time.NewTicker(fs.storeInterval)
 	defer storeTicker.Stop()
 	quit := make(chan struct{})
@@ -68,7 +74,7 @@ func (fs FileSaver) Run() {
 			}
 		case <-quit:
 			storeTicker.Stop()
-			return
+			return nil
 		}
 	}
 }

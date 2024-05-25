@@ -19,7 +19,7 @@ type FileStorage struct {
 
 func New(cfg *config.Config) (*FileStorage, error) {
 	var mode fs.FileMode = 0o600
-	file, err := os.OpenFile(cfg.FileStoragePath, os.O_RDWR|os.O_CREATE, mode)
+	file, err := os.OpenFile(cfg.FileStoragePath, os.O_RDWR|os.O_CREATE|os.O_TRUNC, mode)
 	if err != nil {
 		return nil, fmt.Errorf("failed to  init file storage: %w", err)
 	}
@@ -67,4 +67,11 @@ func (f *FileStorage) GetMetrics() ([]*models.Metrics, error) {
 		metrics = append(metrics, metric)
 	}
 	return metrics, nil
+}
+
+func (f *FileStorage) Close() error {
+	if err := f.file.Close(); err != nil {
+		return fmt.Errorf("Filestorage.Close: %w", err)
+	}
+	return nil
 }

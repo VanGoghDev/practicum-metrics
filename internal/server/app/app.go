@@ -11,7 +11,7 @@ import (
 )
 
 type FileSaver interface {
-	Run()
+	Run() error
 }
 
 type App struct {
@@ -32,6 +32,10 @@ func New(cfg *config.Config, log *zap.Logger, mstrg *memstorage.MemStorage) (*Ap
 	}, nil
 }
 
-func (a *App) RunApp() {
-	a.filesaver.Run()
+func (a *App) RunApp() error {
+	err := a.filesaver.Run()
+	if err != nil {
+		return fmt.Errorf("App.Run: %w", err)
+	}
+	return nil
 }

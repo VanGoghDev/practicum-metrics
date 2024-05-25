@@ -43,7 +43,12 @@ func run() error {
 		return fmt.Errorf("failed to init app %w", err)
 	}
 
-	go sapp.RunApp()
+	if cfg.StoreInterval > 0 {
+		go func() {
+			err := sapp.RunApp()
+			zlog.Error(fmt.Sprintf("failed to run app: %v", err))
+		}()
+	}
 
 	// router
 	router := chirouter.BuildRouter(&s, &s, zlog)
