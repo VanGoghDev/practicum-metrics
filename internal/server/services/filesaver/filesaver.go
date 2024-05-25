@@ -50,6 +50,7 @@ func (fs FileSaver) Run() error {
 			_ = fmt.Errorf("FileSaver.Run: %w", err)
 		}
 	}()
+	fs.logger.Info("running server app...")
 	if fs.restore {
 		err := fs.Restore()
 		if err != nil {
@@ -63,6 +64,7 @@ func (fs FileSaver) Run() error {
 	for {
 		select {
 		case <-storeTicker.C:
+			fs.logger.Info("saving metrics to file...")
 			metrics, err := fs.memstorage.GetMetrics()
 			if err != nil {
 				fs.logger.Warn(fmt.Sprintf("filestorage returned error on get: %v", err))
@@ -73,6 +75,7 @@ func (fs FileSaver) Run() error {
 				fs.logger.Warn(fmt.Sprintf("filestorage returned error on write: %v", err))
 			}
 		case <-quit:
+			fs.logger.Info("stopping server")
 			storeTicker.Stop()
 			return nil
 		}

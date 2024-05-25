@@ -31,6 +31,7 @@ func run() error {
 		return fmt.Errorf("failed to init logger %w", err)
 	}
 	zlog.Info("Logger init")
+	zlog.Sugar().Info(cfg)
 
 	// storage
 	s, err := memstorage.New()
@@ -38,12 +39,13 @@ func run() error {
 		return fmt.Errorf("failed to init storage %w", err)
 	}
 
-	sapp, err := app.New(cfg, zlog, &s)
-	if err != nil {
-		return fmt.Errorf("failed to init app %w", err)
-	}
-
 	if cfg.StoreInterval > 0 {
+		sapp, err := app.New(cfg, zlog, &s)
+		if err != nil {
+			return fmt.Errorf("failed to init app %w", err)
+		}
+
+		zlog.Info("running file storage on intervals")
 		go func() {
 			err := sapp.RunApp()
 			zlog.Error(fmt.Sprintf("failed to run app: %v", err))

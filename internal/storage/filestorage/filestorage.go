@@ -5,7 +5,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/fs"
+	"log"
 	"os"
+	"path/filepath"
 
 	"github.com/VanGoghDev/practicum-metrics/internal/domain/models"
 	"github.com/VanGoghDev/practicum-metrics/internal/server/config"
@@ -18,6 +20,11 @@ type FileStorage struct {
 }
 
 func New(cfg *config.Config) (*FileStorage, error) {
+	dir, _ := filepath.Split(cfg.FileStoragePath)
+	log.Printf("path: %s", dir)
+	if err := os.MkdirAll(dir, 0770); err != nil {
+		return nil, fmt.Errorf("failed to init path: %w", err)
+	}
 	var mode fs.FileMode = 0o600
 	file, err := os.OpenFile(cfg.FileStoragePath, os.O_RDWR|os.O_CREATE|os.O_TRUNC, mode)
 	if err != nil {
