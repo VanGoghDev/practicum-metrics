@@ -4,17 +4,18 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"strconv"
 	"time"
 
 	"github.com/caarlos0/env"
 )
 
 type Config struct {
-	Address         string        `env:"ADDRESS"`
-	Loglevel        string        `env:"LOGLVL"`
-	FileStoragePath string        `env:"FILE_STORAGE_PATH"`
-	Restore         bool          `env:"RESTORE"`
-	StoreInterval   time.Duration `env:"STORE_INTERVAL"`
+	Address         string `env:"ADDRESS"`
+	Loglevel        string `env:"LOGLVL"`
+	FileStoragePath string `env:"FILE_STORAGE_PATH"`
+	Restore         bool   `env:"RESTORE"`
+	StoreInterval   time.Duration
 }
 
 const (
@@ -54,8 +55,14 @@ func Load() (config *Config, err error) {
 		cfg.Restore = flagRestore
 	}
 
-	if _, present := os.LookupEnv("STORE_INTERVAL"); !present {
+	if v, present := os.LookupEnv("STORE_INTERVAL"); !present {
 		cfg.StoreInterval = time.Duration(flagStoreInterval) * time.Second
+	} else {
+		i, err := strconv.Atoi(v)
+		if err != nil {
+			return nil, fmt.Errorf("unable to set storeInterval value: %w", err)
+		}
+		cfg.StoreInterval = time.Duration(i) * time.Second
 	}
 
 	return &cfg, nil

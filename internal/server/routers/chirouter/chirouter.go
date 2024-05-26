@@ -16,11 +16,11 @@ func BuildRouter(s update.MetricsSaver, p metrics.MetricsProvider, log *zap.Logg
 	r.Use(compressor.New(log))
 
 	r.Route("/", func(r chi.Router) {
-		r.Get("/", metrics.MetricsHandler(p))
+		r.Get("/", metrics.MetricsHandler(log, p))
 	})
 
 	r.Route("/value", func(r chi.Router) {
-		r.Post("/", metrics.MetricHandler(p))
+		r.Post("/", metrics.MetricHandler(log, p))
 		r.Get("/{type}/{name}", metrics.MetricHandlerRouterParams(p))
 	})
 

@@ -29,13 +29,13 @@ type FileSaver struct {
 	restore       bool
 }
 
-func New(cfg *config.Config, log *zap.Logger, mstrg MemStorage) (*FileSaver, error) {
-	filestrg, err := filestorage.New(cfg)
+func New(cfg *config.Config, zlog *zap.Logger, mstrg MemStorage) (*FileSaver, error) {
+	filestrg, err := filestorage.New(zlog, cfg)
 	if err != nil {
 		return nil, fmt.Errorf("failed to initialize file storage: %w", err)
 	}
 	return &FileSaver{
-		logger:        log,
+		logger:        zlog,
 		memstorage:    mstrg,
 		filestrg:      filestrg,
 		storeInterval: cfg.StoreInterval,
@@ -57,7 +57,12 @@ func (fs FileSaver) Run() error {
 			fs.logger.Warn(fmt.Sprintf("failed to restore metrics: %v", err))
 		}
 	}
-	storeTicker := time.NewTicker(fs.storeInterval)
+
+	var storeTicker *time.Ticker
+	if fs.storeInterval == 0 {
+		time.NewTicker(0 * time.Millisecond)
+	}
+	storeTicker = time.NewTicker(fs.storeInterval)
 	defer storeTicker.Stop()
 	quit := make(chan struct{})
 

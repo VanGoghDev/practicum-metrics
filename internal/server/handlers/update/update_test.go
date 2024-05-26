@@ -104,7 +104,7 @@ func TestUpdateHandler(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			log, _ := logger.New("Info")
-			s, _ := memstorage.New()
+			s, _ := memstorage.New(log)
 			r := chirouter.BuildRouter(&s, &s, log)
 			srv := httptest.NewServer(r)
 			defer srv.Close()
@@ -125,7 +125,7 @@ func TestUpdateHandler(t *testing.T) {
 
 func TestGzipCompression(t *testing.T) {
 	log, _ := logger.New("Info")
-	s, _ := memstorage.New()
+	s, _ := memstorage.New(log)
 	s.GaugesM = map[string]float64{
 		"Alloc": 2.0,
 	}

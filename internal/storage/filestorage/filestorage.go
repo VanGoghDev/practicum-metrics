@@ -5,33 +5,29 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/fs"
-	"log"
 	"os"
-	"path/filepath"
 
 	"github.com/VanGoghDev/practicum-metrics/internal/domain/models"
 	"github.com/VanGoghDev/practicum-metrics/internal/server/config"
+	"go.uber.org/zap"
 )
 
 type FileStorage struct {
+	zlog    *zap.Logger
 	file    *os.File
 	writer  *bufio.Writer
 	scanner *bufio.Scanner
 }
 
-func New(cfg *config.Config) (*FileStorage, error) {
-	dir, _ := filepath.Split(cfg.FileStoragePath)
-	log.Printf("path: %s", dir)
-	if err := os.MkdirAll(dir, 0770); err != nil {
-		return nil, fmt.Errorf("failed to init path: %w", err)
-	}
-	var mode fs.FileMode = 0o600
-	file, err := os.OpenFile(cfg.FileStoragePath, os.O_RDWR|os.O_CREATE|os.O_TRUNC, mode)
+func New(log *zap.Logger, cfg *config.Config) (*FileStorage, error) {
+	var perm fs.FileMode = 0o666
+	file, err := os.OpenFile(cfg.FileStoragePath, os.O_RDWR|os.O_CREATE|os.O_TRUNC, perm)
 	if err != nil {
 		return nil, fmt.Errorf("failed to  init file storage: %w", err)
 	}
 
 	return &FileStorage{
+		zlog:    log,
 		file:    file,
 		writer:  bufio.NewWriter(file),
 		scanner: bufio.NewScanner(file),
@@ -39,6 +35,13 @@ func New(cfg *config.Config) (*FileStorage, error) {
 }
 
 func (f *FileStorage) Save(metrics []*models.Metrics) error {
+	if len(metrics) == 0 {
+		return nil
+	}
+	err := f.file.Truncate(0)
+	if err != nil {
+		return fmt.Errorf("failed to truncate file: %w", err)
+	}
 	for _, v := range metrics {
 		data, err := json.Marshal(v)
 		if err != nil {
@@ -55,7 +58,7 @@ func (f *FileStorage) Save(metrics []*models.Metrics) error {
 			return fmt.Errorf("failed to write delimiter to file: %w", err)
 		}
 	}
-	err := f.writer.Flush()
+	err = f.writer.Flush()
 	if err != nil {
 		return fmt.Errorf("failed to flush data to file: %w", err)
 	}
@@ -63,16 +66,21 @@ func (f *FileStorage) Save(metrics []*models.Metrics) error {
 }
 
 func (f *FileStorage) GetMetrics() ([]*models.Metrics, error) {
+	f.zlog.Info("getting metrics from file!")
 	metrics := make([]*models.Metrics, 0)
 	for f.scanner.Scan() {
 		metric := &models.Metrics{}
 		data := f.scanner.Bytes()
-		err := json.Unmarshal(data, metric)
-		if err != nil {
-			return nil, fmt.Errorf("failed to unmarshal metric: %w", err)
+		if len(data) > 0 {
+			err := json.Unmarshal(data, metric)
+			if err != nil {
+				return nil, fmt.Errorf("failed to unmarshal metric: %w", err)
+			}
+			metrics = append(metrics, metric)
 		}
-		metrics = append(metrics, metric)
 	}
+	f.zlog.Info("got metrics from file!")
+
 	return metrics, nil
 }
 

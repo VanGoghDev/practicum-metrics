@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/VanGoghDev/practicum-metrics/internal/domain/models"
+	"go.uber.org/zap"
 )
 
 var (
@@ -14,12 +15,14 @@ var (
 )
 
 type MemStorage struct {
+	zlog      *zap.Logger
 	GaugesM   map[string]float64
 	CountersM map[string]int64
 }
 
-func New() (MemStorage, error) {
+func New(zlog *zap.Logger) (MemStorage, error) {
 	s := MemStorage{
+		zlog:      zlog,
 		GaugesM:   make(map[string]float64),
 		CountersM: make(map[string]int64),
 	}
@@ -56,7 +59,7 @@ func (s *MemStorage) Gauges() (gauges []models.Gauge, err error) {
 			Value: v,
 		})
 	}
-	return
+	return gauges, err
 }
 
 func (s *MemStorage) Counters() (counters []models.Counter, err error) {
@@ -71,26 +74,29 @@ func (s *MemStorage) Counters() (counters []models.Counter, err error) {
 			Value: v,
 		})
 	}
-	return
+	return counters, err
 }
 
 func (s *MemStorage) Gauge(name string) (gauge models.Gauge, err error) {
-	if s == nil || s.CountersM == nil {
+	if s == nil || s.GaugesM == nil {
 		return models.Gauge{}, ErrCountersTableNil
 	}
+	s.zlog.Info("getting gauge")
 
 	if name == "" {
 		return models.Gauge{}, ErrNotFound
 	}
-
 	if v, ok := s.GaugesM[name]; !ok {
+		s.zlog.Info("gauge does not exist")
 		return models.Gauge{}, ErrNotFound
 	} else {
+		s.zlog.Info("gauge does not exist")
+
 		gauge = models.Gauge{
 			Name:  name,
 			Value: v,
 		}
-		return
+		return gauge, nil
 	}
 }
 
@@ -98,19 +104,27 @@ func (s *MemStorage) Counter(name string) (counter models.Counter, err error) {
 	if s == nil || s.CountersM == nil {
 		return models.Counter{}, ErrCountersTableNil
 	}
+	s.zlog.Info("getting counter")
 
 	if name == "" {
+		s.zlog.Info("name is empty")
+
 		return models.Counter{}, ErrNotFound
 	}
+	s.zlog.Info("11111111")
 
 	if v, ok := s.CountersM[name]; !ok {
+		s.zlog.Info("counter not found")
+
 		return models.Counter{}, ErrNotFound
 	} else {
+		s.zlog.Info("counter found")
+
 		counter = models.Counter{
 			Name:  name,
 			Value: v,
 		}
-		return
+		return counter, nil
 	}
 }
 

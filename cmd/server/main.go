@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
 
 	"github.com/VanGoghDev/practicum-metrics/internal/server/app"
 	"github.com/VanGoghDev/practicum-metrics/internal/server/config"
@@ -13,6 +14,8 @@ import (
 )
 
 func main() {
+	file, _ := os.OpenFile("/Users/kirillfirsov/Documents/practicum/static/server.log", os.O_CREATE|os.O_WRONLY, 0666)
+	log.SetOutput(file)
 	if err := run(); err != nil {
 		log.Fatal("failed to run app %w", err)
 	}
@@ -34,7 +37,7 @@ func run() error {
 	zlog.Sugar().Info(cfg)
 
 	// storage
-	s, err := memstorage.New()
+	s, err := memstorage.New(zlog)
 	if err != nil {
 		return fmt.Errorf("failed to init storage %w", err)
 	}

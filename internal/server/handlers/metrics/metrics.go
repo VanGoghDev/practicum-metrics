@@ -12,6 +12,7 @@ import (
 	"github.com/VanGoghDev/practicum-metrics/internal/storage/memstorage"
 	"github.com/VanGoghDev/practicum-metrics/internal/util/converter"
 	"github.com/go-chi/chi"
+	"go.uber.org/zap"
 )
 
 type MetricsProvider interface {
@@ -31,7 +32,7 @@ const (
 	notFoundErrMsg = "Not found"
 )
 
-func MetricsHandler(s MetricsProvider) http.HandlerFunc {
+func MetricsHandler(zlog *zap.Logger, s MetricsProvider) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 
@@ -83,13 +84,13 @@ func MetricsHandler(s MetricsProvider) http.HandlerFunc {
 	}
 }
 
-func MetricHandler(s MetricsProvider) http.HandlerFunc {
+func MetricHandler(zlog *zap.Logger, s MetricsProvider) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		var req models.Metrics
 		dec := json.NewDecoder(r.Body)
 		if err := dec.Decode(&req); err != nil {
-			// log?
+			zlog.Sugar().Errorf("failed to decode request: %w", err)
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}

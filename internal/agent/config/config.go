@@ -23,6 +23,7 @@ const (
 
 func Load() (config *Config, err error) {
 	cfg := Config{}
+
 	if err := env.Parse(&cfg); err != nil {
 		return nil, fmt.Errorf("failed to parse config %w", err)
 	}
@@ -31,10 +32,12 @@ func Load() (config *Config, err error) {
 	var logLevel, flagAddress string
 
 	flag.StringVar(&flagAddress, "a", "localhost:8080", "address and port to run server")
-	flag.Int64Var(&reportInteval, "r", defaultReportInterval,
+	flag.Int64Var(&reportInteval,
+		"r", defaultReportInterval,
 		"report interval (interval of requests to consumer, in seconds)")
 	flag.Int64Var(&pollInterval, "p", defaultPollInterval, "poll interval (interval of metrics fetch, in seconds)")
 	flag.StringVar(&logLevel, "lvl", "info", "log level")
+
 	flag.Parse()
 
 	if _, present := os.LookupEnv("ADDRESS"); !present {

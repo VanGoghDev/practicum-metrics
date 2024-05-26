@@ -5,7 +5,7 @@ import (
 
 	agent "github.com/VanGoghDev/practicum-metrics/internal/agent/app"
 	"github.com/VanGoghDev/practicum-metrics/internal/agent/config"
-	"github.com/VanGoghDev/practicum-metrics/internal/server/logger"
+	"github.com/VanGoghDev/practicum-metrics/internal/agent/logger"
 )
 
 func main() {
