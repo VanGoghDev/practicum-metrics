@@ -44,7 +44,7 @@ func New(zlog *zap.Logger, cfg *config.Config) (*FileStorage, error) {
 	f.MemStorage.GaugesM = make(map[string]float64)
 	f.MemStorage.CountersM = make(map[string]int64)
 
-	if cfg.Restore {
+	if cfg.Restore && f.file != nil {
 		err := f.Restore()
 		if err != nil {
 			return nil, fmt.Errorf("failed to restore file storage: %w", err)

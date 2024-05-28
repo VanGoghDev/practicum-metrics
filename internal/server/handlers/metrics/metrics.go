@@ -129,6 +129,10 @@ func MetricHandler(zlog *zap.Logger, s routers.Storage) http.HandlerFunc {
 			{
 				gauge, err := s.Gauge(req.ID)
 				if err != nil {
+					if errors.Is(err, storage.ErrNotFound) {
+						http.Error(w, notFoundErrMsg, http.StatusNotFound)
+						return
+					}
 					zlog.Sugar().Errorf("error encoding response: %w", errFailedToFetchGauge)
 					http.Error(w, internalErrMsg, http.StatusInternalServerError)
 					return
