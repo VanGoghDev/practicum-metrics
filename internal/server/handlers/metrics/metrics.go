@@ -104,12 +104,7 @@ func MetricHandler(zlog *zap.Logger, s routers.Storage) http.HandlerFunc {
 			{
 				counter, err := s.Counter(req.ID)
 				if err != nil {
-					if errors.Is(err, storage.ErrNotFound) {
-						http.Error(w, notFoundErrMsg, http.StatusNotFound)
-						return
-					}
-					zlog.Sugar().Errorf("Invalid metric type: %w", err)
-					http.Error(w, internalErrMsg, http.StatusInternalServerError)
+					handleError(zlog, err, w)
 					return
 				}
 				resp := models.Metrics{
@@ -129,12 +124,7 @@ func MetricHandler(zlog *zap.Logger, s routers.Storage) http.HandlerFunc {
 			{
 				gauge, err := s.Gauge(req.ID)
 				if err != nil {
-					if errors.Is(err, storage.ErrNotFound) {
-						http.Error(w, notFoundErrMsg, http.StatusNotFound)
-						return
-					}
-					zlog.Sugar().Errorf("error encoding response: %w", errFailedToFetchGauge)
-					http.Error(w, internalErrMsg, http.StatusInternalServerError)
+					handleError(zlog, err, w)
 					return
 				}
 
@@ -228,4 +218,13 @@ func MetricHandlerRouterParams(s routers.Storage) http.HandlerFunc {
 			}
 		}
 	}
+}
+
+func handleError(zlog *zap.Logger, err error, w http.ResponseWriter) {
+	if errors.Is(err, storage.ErrNotFound) {
+		http.Error(w, notFoundErrMsg, http.StatusNotFound)
+		return
+	}
+	zlog.Sugar().Errorf("Invalid metric type: %w", err)
+	http.Error(w, internalErrMsg, http.StatusInternalServerError)
 }
