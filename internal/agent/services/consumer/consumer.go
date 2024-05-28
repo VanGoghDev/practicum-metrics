@@ -74,7 +74,7 @@ func (s *ServerConsumer) sendRequest(request *http.Request) error {
 	resp, err := s.client.Do(request)
 	if err != nil {
 		log.Printf("unexpected error %v", err)
-		return fmt.Errorf("failed to save gauge on serverssssssssssssssssssss %w", err)
+		return fmt.Errorf("failed to save gauge on server %w", err)
 	}
 	defer func() {
 		err = dclose(resp.Body)

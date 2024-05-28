@@ -23,7 +23,7 @@ const (
 func UpdateHandler(log *zap.Logger, storage MetricsSaver) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		var req models.Metrics
+		req := &models.Metrics{}
 		dec := json.NewDecoder(r.Body)
 		if err := dec.Decode(&req); err != nil {
 			log.Sugar().Warnf("failed to decode JSON body", zap.Error(err))

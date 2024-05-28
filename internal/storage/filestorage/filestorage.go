@@ -9,79 +9,145 @@ import (
 
 	"github.com/VanGoghDev/practicum-metrics/internal/domain/models"
 	"github.com/VanGoghDev/practicum-metrics/internal/server/config"
+	"github.com/VanGoghDev/practicum-metrics/internal/storage"
+	"github.com/VanGoghDev/practicum-metrics/internal/storage/memstorage"
 	"go.uber.org/zap"
 )
 
 type FileStorage struct {
+	memstorage.MemStorage
 	zlog    *zap.Logger
 	file    *os.File
 	writer  *bufio.Writer
 	scanner *bufio.Scanner
 }
 
-func New(log *zap.Logger, cfg *config.Config) (*FileStorage, error) {
+func New(zlog *zap.Logger, cfg *config.Config) (*FileStorage, error) {
 	var perm fs.FileMode = 0o666
-	file, err := os.OpenFile(cfg.FileStoragePath, os.O_RDWR|os.O_CREATE|os.O_TRUNC, perm)
+	file, err := os.OpenFile(cfg.FileStoragePath, os.O_RDWR|os.O_CREATE, perm)
 	if err != nil {
-		return nil, fmt.Errorf("failed to  init file storage: %w", err)
+		return nil, fmt.Errorf("failed to  open a file: %w", err)
 	}
 
-	return &FileStorage{
-		zlog:    log,
-		file:    file,
-		writer:  bufio.NewWriter(file),
-		scanner: bufio.NewScanner(file),
-	}, nil
+	memsrtg, err := memstorage.New(zlog)
+	if err != nil {
+		return nil, fmt.Errorf("failed to init memory storage: %w", err)
+	}
+
+	f := &FileStorage{
+		zlog:       zlog,
+		file:       file,
+		MemStorage: memsrtg,
+		writer:     bufio.NewWriter(file),
+		scanner:    bufio.NewScanner(file),
+	}
+	f.MemStorage.GaugesM = make(map[string]float64)
+	f.MemStorage.CountersM = make(map[string]int64)
+
+	if cfg.Restore {
+		err := f.Restore()
+		if err != nil {
+			return nil, fmt.Errorf("failed to restore file storage: %w", err)
+		}
+	}
+	return f, nil
 }
 
-func (f *FileStorage) Save(metrics []*models.Metrics) error {
-	if len(metrics) == 0 {
-		return nil
+func (f *FileStorage) SaveGauge(name string, value float64) (err error) {
+	if f.MemStorage.GaugesM == nil {
+		return storage.ErrGaugesTableNil
 	}
-	err := f.file.Truncate(0)
-	if err != nil {
-		return fmt.Errorf("failed to truncate file: %w", err)
-	}
-	for _, v := range metrics {
-		data, err := json.Marshal(v)
-		if err != nil {
-			return fmt.Errorf("failed to marshal metrics: %w", err)
-		}
 
-		_, err = f.writer.Write(data)
-		if err != nil {
-			return fmt.Errorf("failed to write metrics to file: %w", err)
-		}
+	f.MemStorage.GaugesM[name] = value
 
-		err = f.writer.WriteByte('\n')
-		if err != nil {
-			return fmt.Errorf("failed to write delimiter to file: %w", err)
-		}
+	gauge := &models.Metrics{
+		ID:    name,
+		MType: "gauge",
+		Value: &value,
 	}
-	err = f.writer.Flush()
+	data, err := json.Marshal(gauge)
 	if err != nil {
+		return fmt.Errorf("failed to marshal gauge %s: %w", gauge.ID, err)
+	}
+	// добавим символ переноса строки
+	data = append(data, '\n')
+
+	return f.SaveToFile(data)
+}
+
+func (f *FileStorage) SaveCount(name string, value int64) (err error) {
+	if f.MemStorage.CountersM == nil {
+		return storage.ErrCountersTableNil
+	}
+
+	f.MemStorage.CountersM[name] += value
+
+	counter := &models.Metrics{
+		ID:    name,
+		MType: "counter",
+		Delta: &value,
+	}
+	data, err := json.Marshal(counter)
+	if err != nil {
+		return fmt.Errorf("failed to marshal counter %s: %w", counter.ID, err)
+	}
+	// добавим символ переноса строки
+	data = append(data, '\n')
+
+	return f.SaveToFile(data)
+}
+
+func (f *FileStorage) SaveToFile(data []byte) error {
+	_, err := f.writer.Write(data)
+
+	if err != nil {
+		return fmt.Errorf("failed to write data to file: %w", err)
+	}
+
+	if err = f.writer.Flush(); err != nil {
 		return fmt.Errorf("failed to flush data to file: %w", err)
 	}
+
 	return nil
 }
 
-func (f *FileStorage) GetMetrics() ([]*models.Metrics, error) {
-	f.zlog.Info("getting metrics from file!")
+func (f *FileStorage) Restore() error {
+	f.zlog.Info("restoring metrics from file!")
 	metrics := make([]*models.Metrics, 0)
 	for f.scanner.Scan() {
-		metric := &models.Metrics{}
+		metric := models.Metrics{}
 		data := f.scanner.Bytes()
 		if len(data) > 0 {
-			err := json.Unmarshal(data, metric)
+			f.zlog.Info("data:", zap.String("data:", string(data)))
+			err := json.Unmarshal(data, &metric)
 			if err != nil {
-				return nil, fmt.Errorf("failed to unmarshal metric: %w", err)
+				fmt.Println(f.scanner.Text())
+				return fmt.Errorf("failed to unmarshal metric: %w", err)
 			}
-			metrics = append(metrics, metric)
+			metrics = append(metrics, &metric)
 		}
+	}
+	if err := f.scanner.Err(); err != nil {
+		f.zlog.Sugar().Warnf("failed to scan file: %v", err)
 	}
 	f.zlog.Info("got metrics from file!")
 
-	return metrics, nil
+	for _, v := range metrics {
+		switch v.MType {
+		case "gauge":
+			err := f.SaveGauge(v.ID, *v.Value)
+			if err != nil {
+				return fmt.Errorf("failed to restore gauge %s: %w", v.ID, err)
+			}
+		case "counter":
+			err := f.SaveCount(v.ID, *v.Delta)
+			if err != nil {
+				return fmt.Errorf("failed to restore counter %s: %w", v.ID, err)
+			}
+		}
+	}
+
+	return nil
 }
 
 func (f *FileStorage) Close() error {

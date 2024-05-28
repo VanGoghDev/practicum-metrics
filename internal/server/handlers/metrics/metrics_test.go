@@ -64,10 +64,10 @@ func TestMetricHandler(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			log, _ := logger.New("Info")
-			r := chirouter.BuildRouter(nil, &memstorage.MemStorage{
-				GaugesM:   tt.gaugesM,
-				CountersM: tt.countersM,
-			}, log)
+			memstrg, _ := memstorage.New(log)
+			memstrg.CountersM = tt.countersM
+			memstrg.GaugesM = tt.gaugesM
+			r := chirouter.BuildRouter(nil, &memstrg, log)
 			srv := httptest.NewServer(r)
 			defer srv.Close()
 

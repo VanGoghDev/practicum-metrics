@@ -195,23 +195,5 @@ func TestGzipCompression(t *testing.T) {
 		require.NoError(t, err)
 		require.NotEmpty(t, b)
 		require.JSONEq(t, successBody, string(b))
-
-		// buf := bytes.NewBufferString(requestBody)
-
-		// resp, err := resty.New().R().
-		// 	SetDoNotParseResponse(true).
-		// 	SetHeader("Accept-Encoding", "gzip").
-		// 	SetBody(buf).
-		// 	Post(srv.URL + "/value")
-		// require.NoError(t, err)
-		// require.Equal(t, http.StatusOK, resp.StatusCode)
-
-		// zr, err := gzip.NewReader(resp.RawBody())
-		// require.NoError(t, err)
-
-		// b, err := io.ReadAll(zr)
-		// require.NoError(t, err)
-
-		// require.JSONEq(t, successBody, string(b))
 	})
 }

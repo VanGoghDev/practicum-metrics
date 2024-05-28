@@ -9,7 +9,7 @@ import (
 
 	"github.com/VanGoghDev/practicum-metrics/internal/domain/models"
 	"github.com/VanGoghDev/practicum-metrics/internal/server/handlers"
-	"github.com/VanGoghDev/practicum-metrics/internal/storage/memstorage"
+	"github.com/VanGoghDev/practicum-metrics/internal/storage"
 	"github.com/VanGoghDev/practicum-metrics/internal/util/converter"
 	"github.com/go-chi/chi"
 	"go.uber.org/zap"
@@ -110,10 +110,11 @@ func MetricHandler(zlog *zap.Logger, s MetricsProvider) http.HandlerFunc {
 			{
 				counter, err := s.Counter(req.ID)
 				if err != nil {
-					if errors.Is(err, memstorage.ErrNotFound) {
+					if errors.Is(err, storage.ErrNotFound) {
 						http.Error(w, notFoundErrMsg, http.StatusNotFound)
 						return
 					}
+					zlog.Sugar().Errorf("Invalid metric type: %w", err)
 					http.Error(w, internalErrMsg, http.StatusInternalServerError)
 					return
 				}
@@ -124,7 +125,8 @@ func MetricHandler(zlog *zap.Logger, s MetricsProvider) http.HandlerFunc {
 				}
 				enc := json.NewEncoder(w)
 				if err := enc.Encode(resp); err != nil {
-					log.Printf("error encoding response %v", err)
+					zlog.Sugar().Errorf("error encoding response: %w", err)
+					http.Error(w, internalErrMsg, http.StatusInternalServerError)
 					return
 				}
 				return
@@ -133,11 +135,7 @@ func MetricHandler(zlog *zap.Logger, s MetricsProvider) http.HandlerFunc {
 			{
 				gauge, err := s.Gauge(req.ID)
 				if err != nil {
-					if errors.Is(err, memstorage.ErrNotFound) {
-						http.Error(w, notFoundErrMsg, http.StatusNotFound)
-						return
-					}
-					log.Printf("%v", errFailedToFetchGauge)
+					zlog.Sugar().Errorf("error encoding response: %w", errFailedToFetchGauge)
 					http.Error(w, internalErrMsg, http.StatusInternalServerError)
 					return
 				}
@@ -149,7 +147,8 @@ func MetricHandler(zlog *zap.Logger, s MetricsProvider) http.HandlerFunc {
 				}
 				enc := json.NewEncoder(w)
 				if err := enc.Encode(resp); err != nil {
-					log.Printf("error encoding response %v", err)
+					zlog.Sugar().Errorf("error encoding writer: %w", errFailedToFetchGauge)
+					http.Error(w, internalErrMsg, http.StatusInternalServerError)
 					return
 				}
 				return
@@ -181,7 +180,7 @@ func MetricHandlerRouterParams(s MetricsProvider) http.HandlerFunc {
 			{
 				counter, err := s.Counter(mName)
 				if err != nil {
-					if errors.Is(err, memstorage.ErrNotFound) {
+					if errors.Is(err, storage.ErrNotFound) {
 						http.Error(w, "Not found", http.StatusNotFound)
 						return
 					}
@@ -207,7 +206,7 @@ func MetricHandlerRouterParams(s MetricsProvider) http.HandlerFunc {
 			{
 				gauge, err := s.Gauge(mName)
 				if err != nil {
-					if errors.Is(err, memstorage.ErrNotFound) {
+					if errors.Is(err, storage.ErrNotFound) {
 						http.Error(w, "Not found", http.StatusNotFound)
 						return
 					}

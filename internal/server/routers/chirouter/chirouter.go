@@ -12,8 +12,8 @@ import (
 func BuildRouter(s update.MetricsSaver, p metrics.MetricsProvider, log *zap.Logger) chi.Router {
 	r := chi.NewRouter()
 
-	r.Use(mwLogger.New(log))
 	r.Use(compressor.New(log))
+	r.Use(mwLogger.New(log))
 
 	r.Route("/", func(r chi.Router) {
 		r.Get("/", metrics.MetricsHandler(log, p))

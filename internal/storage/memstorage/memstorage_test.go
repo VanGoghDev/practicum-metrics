@@ -3,6 +3,8 @@ package memstorage
 import (
 	"testing"
 
+	"github.com/VanGoghDev/practicum-metrics/internal/server/logger"
+	"github.com/VanGoghDev/practicum-metrics/internal/storage"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -19,13 +21,15 @@ type want struct {
 	metricValue float64
 }
 
+type test struct {
+	name   string
+	fields fields
+	args   args
+	want   want
+}
+
 func TestGauge(t *testing.T) {
-	tests := []struct {
-		name   string
-		fields fields
-		args   args
-		want   want
-	}{
+	tests := []test{
 		{
 			name: "get existing gauge",
 			fields: fields{
@@ -54,17 +58,17 @@ func TestGauge(t *testing.T) {
 				name: "test",
 			},
 			want: want{
-				err: ErrNotFound,
+				err: storage.ErrNotFound,
 			},
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			s := &MemStorage{
-				GaugesM:   tt.fields.Gauges,
-				CountersM: tt.fields.Counters,
-			}
+			zlog, _ := logger.New("Info")
+			s, _ := New(zlog)
+			s.GaugesM = tt.fields.Gauges
+			s.CountersM = tt.fields.Counters
 			gauge, err := s.Gauge(tt.args.name)
 			assert.Equal(t, tt.want.err, err)
 			assert.Equal(t, tt.want.metricValue, gauge.Value)
@@ -112,16 +116,19 @@ func TestCounter(t *testing.T) {
 				name: "test",
 			},
 			want: want{
-				err: ErrNotFound,
+				err: storage.ErrNotFound,
 			},
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			log, _ := logger.New("Info")
+
 			s := &MemStorage{
 				GaugesM:   tt.fields.Gauges,
 				CountersM: tt.fields.Counters,
+				zlog:      log,
 			}
 			counter, err := s.Counter(tt.args.name)
 			assert.Equal(t, tt.want.err, err)
@@ -153,7 +160,7 @@ func TestSaveCount(t *testing.T) {
 				value: 20,
 			},
 			want: want{
-				err: ErrCountersTableNil,
+				err: storage.ErrCountersTableNil,
 			},
 		},
 		{
@@ -192,9 +199,12 @@ func TestSaveCount(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			log, _ := logger.New("Info")
+
 			s := &MemStorage{
 				GaugesM:   tt.fields.Gauges,
 				CountersM: tt.fields.Counters,
+				zlog:      log,
 			}
 			err := s.SaveCount(tt.args.name, tt.args.value)
 			assert.Equal(t, tt.want.err, err)
@@ -204,12 +214,7 @@ func TestSaveCount(t *testing.T) {
 }
 
 func TestSaveGauge(t *testing.T) {
-	tests := []struct {
-		name   string
-		fields fields
-		args   args
-		want   want
-	}{
+	tests := []test{
 		{
 			name:   "empty gauge table",
 			fields: fields{},
@@ -218,7 +223,7 @@ func TestSaveGauge(t *testing.T) {
 				value: 20,
 			},
 			want: want{
-				err: ErrGaugesTableNil,
+				err: storage.ErrGaugesTableNil,
 			},
 		},
 		{
@@ -257,14 +262,22 @@ func TestSaveGauge(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			s := &MemStorage{
-				GaugesM:   tt.fields.Gauges,
-				CountersM: tt.fields.Counters,
-			}
-			err := s.SaveGauge(tt.args.name, tt.args.value)
-			assert.Equal(t, tt.want.err, err)
-			assert.Equal(t, tt.want.metricValue, s.GaugesM[tt.args.name])
-		})
+		runTest(t, &tt)
+	}
+}
+
+func runTest(t *testing.T, tt *test) func(name string, f func(t *testing.T)) bool {
+	t.Helper()
+	return func(name string, f func(t *testing.T)) bool {
+		log, _ := logger.New("Info")
+
+		s := &MemStorage{
+			GaugesM:   tt.fields.Gauges,
+			CountersM: tt.fields.Counters,
+			zlog:      log,
+		}
+		err := s.SaveGauge(tt.args.name, tt.args.value)
+		assert.Equal(t, tt.want.err, err)
+		return assert.Equal(t, tt.want.err, err) && assert.Equal(t, tt.want.metricValue, s.GaugesM[tt.args.name])
 	}
 }

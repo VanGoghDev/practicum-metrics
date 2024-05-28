@@ -19,7 +19,7 @@ type Config struct {
 }
 
 const (
-	defaultStoreInterval int64 = 300
+	defaultStoreInterval int64 = 60
 )
 
 func Load() (config *Config, err error) {
@@ -34,7 +34,8 @@ func Load() (config *Config, err error) {
 	flag.StringVar(&flagAddress, "a", "localhost:8080", "address and port to run server")
 	flag.StringVar(&flagLoglevel, "lvl", "info", "log level")
 	flag.Int64Var(&flagStoreInterval, "i", defaultStoreInterval, "store interval in seconds")
-	flag.StringVar(&flagFileStoragePath, "f", "/tmp/metrics-db.json", "path to file storage")
+	flag.StringVar(&flagFileStoragePath,
+		"f", "/Users/kirillfirsov/Documents/practicum/static/test.json", "path to file storage")
 	flag.BoolVar(&flagRestore, "r", true, "restore previous state or not")
 	flag.Parse()
 

@@ -4,18 +4,14 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"os"
 
-	"github.com/VanGoghDev/practicum-metrics/internal/server/app"
 	"github.com/VanGoghDev/practicum-metrics/internal/server/config"
 	"github.com/VanGoghDev/practicum-metrics/internal/server/logger"
 	"github.com/VanGoghDev/practicum-metrics/internal/server/routers/chirouter"
-	"github.com/VanGoghDev/practicum-metrics/internal/storage/memstorage"
+	"github.com/VanGoghDev/practicum-metrics/internal/storage/filestorage"
 )
 
 func main() {
-	file, _ := os.OpenFile("/Users/kirillfirsov/Documents/practicum/static/server.log", os.O_CREATE|os.O_WRONLY, 0666)
-	log.SetOutput(file)
 	if err := run(); err != nil {
 		log.Fatal("failed to run app %w", err)
 	}
@@ -37,26 +33,13 @@ func run() error {
 	zlog.Sugar().Info(cfg)
 
 	// storage
-	s, err := memstorage.New(zlog)
+	s, err := filestorage.New(zlog, cfg)
 	if err != nil {
 		return fmt.Errorf("failed to init storage %w", err)
 	}
 
-	if cfg.StoreInterval > 0 {
-		sapp, err := app.New(cfg, zlog, &s)
-		if err != nil {
-			return fmt.Errorf("failed to init app %w", err)
-		}
-
-		zlog.Info("running file storage on intervals")
-		go func() {
-			err := sapp.RunApp()
-			zlog.Error(fmt.Sprintf("failed to run app: %v", err))
-		}()
-	}
-
 	// router
-	router := chirouter.BuildRouter(&s, &s, zlog)
+	router := chirouter.BuildRouter(s, s, zlog)
 
 	err = http.ListenAndServe(cfg.Address, router)
 	if err != nil {

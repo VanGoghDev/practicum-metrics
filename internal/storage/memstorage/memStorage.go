@@ -1,17 +1,11 @@
 package memstorage
 
 import (
-	"errors"
 	"fmt"
 
 	"github.com/VanGoghDev/practicum-metrics/internal/domain/models"
+	"github.com/VanGoghDev/practicum-metrics/internal/storage"
 	"go.uber.org/zap"
-)
-
-var (
-	ErrGaugesTableNil   = errors.New("gauges table is not initialized")
-	ErrCountersTableNil = errors.New("counter table is not initialized")
-	ErrNotFound         = errors.New("gauge not found")
 )
 
 type MemStorage struct {
@@ -32,7 +26,7 @@ func New(zlog *zap.Logger) (MemStorage, error) {
 
 func (s *MemStorage) SaveGauge(name string, value float64) (err error) {
 	if s == nil || s.GaugesM == nil {
-		return ErrGaugesTableNil
+		return storage.ErrGaugesTableNil
 	}
 
 	s.GaugesM[name] = value
@@ -41,7 +35,7 @@ func (s *MemStorage) SaveGauge(name string, value float64) (err error) {
 
 func (s *MemStorage) SaveCount(name string, value int64) (err error) {
 	if s == nil || s.CountersM == nil {
-		return ErrCountersTableNil
+		return storage.ErrCountersTableNil
 	}
 
 	s.CountersM[name] += value
@@ -50,7 +44,7 @@ func (s *MemStorage) SaveCount(name string, value int64) (err error) {
 
 func (s *MemStorage) Gauges() (gauges []models.Gauge, err error) {
 	if s == nil || s.GaugesM == nil {
-		return nil, ErrGaugesTableNil
+		return nil, storage.ErrGaugesTableNil
 	}
 	gauges = make([]models.Gauge, 0, len(s.GaugesM))
 	for k, v := range s.GaugesM {
@@ -64,7 +58,7 @@ func (s *MemStorage) Gauges() (gauges []models.Gauge, err error) {
 
 func (s *MemStorage) Counters() (counters []models.Counter, err error) {
 	if s == nil || s.CountersM == nil {
-		return nil, ErrCountersTableNil
+		return nil, storage.ErrCountersTableNil
 	}
 
 	counters = make([]models.Counter, 0, len(s.CountersM))
@@ -79,16 +73,16 @@ func (s *MemStorage) Counters() (counters []models.Counter, err error) {
 
 func (s *MemStorage) Gauge(name string) (gauge models.Gauge, err error) {
 	if s == nil || s.GaugesM == nil {
-		return models.Gauge{}, ErrCountersTableNil
+		return models.Gauge{}, storage.ErrCountersTableNil
 	}
 	s.zlog.Info("getting gauge")
 
 	if name == "" {
-		return models.Gauge{}, ErrNotFound
+		return models.Gauge{}, storage.ErrNotFound
 	}
 	if v, ok := s.GaugesM[name]; !ok {
 		s.zlog.Info("gauge does not exist")
-		return models.Gauge{}, ErrNotFound
+		return models.Gauge{}, storage.ErrNotFound
 	} else {
 		s.zlog.Info("gauge does not exist")
 
@@ -102,21 +96,20 @@ func (s *MemStorage) Gauge(name string) (gauge models.Gauge, err error) {
 
 func (s *MemStorage) Counter(name string) (counter models.Counter, err error) {
 	if s == nil || s.CountersM == nil {
-		return models.Counter{}, ErrCountersTableNil
+		return models.Counter{}, storage.ErrCountersTableNil
 	}
 	s.zlog.Info("getting counter")
 
 	if name == "" {
 		s.zlog.Info("name is empty")
 
-		return models.Counter{}, ErrNotFound
+		return models.Counter{}, storage.ErrNotFound
 	}
-	s.zlog.Info("11111111")
 
 	if v, ok := s.CountersM[name]; !ok {
 		s.zlog.Info("counter not found")
 
-		return models.Counter{}, ErrNotFound
+		return models.Counter{}, storage.ErrNotFound
 	} else {
 		s.zlog.Info("counter found")
 

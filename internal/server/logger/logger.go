@@ -14,7 +14,7 @@ func New(level string) (*zap.Logger, error) {
 
 	cfg := zap.NewProductionConfig()
 	cfg.Level = lvl
-
+	cfg.OutputPaths = append(cfg.OutputPaths, "/Users/kirillfirsov/Documents/practicum/static/server.log")
 	zl, err := cfg.Build()
 	if err != nil {
 		return nil, fmt.Errorf("failed to build log cfg: %w", err)
