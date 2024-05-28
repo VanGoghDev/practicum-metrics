@@ -37,7 +37,7 @@ func New(zlog *zap.Logger, cfg *config.Config) (*FileStorage, error) {
 	f := &FileStorage{
 		zlog:       zlog,
 		file:       file,
-		MemStorage: memsrtg,
+		MemStorage: *memsrtg,
 		writer:     bufio.NewWriter(file),
 		scanner:    bufio.NewScanner(file),
 	}

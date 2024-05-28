@@ -67,7 +67,7 @@ func TestMetricHandler(t *testing.T) {
 			memstrg, _ := memstorage.New(log)
 			memstrg.CountersM = tt.countersM
 			memstrg.GaugesM = tt.gaugesM
-			r := chirouter.BuildRouter(nil, &memstrg, log)
+			r := chirouter.BuildRouter(memstrg, log)
 			srv := httptest.NewServer(r)
 			defer srv.Close()
 

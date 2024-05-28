@@ -9,18 +9,12 @@ import (
 
 	"github.com/VanGoghDev/practicum-metrics/internal/domain/models"
 	"github.com/VanGoghDev/practicum-metrics/internal/server/handlers"
+	"github.com/VanGoghDev/practicum-metrics/internal/server/routers"
 	"github.com/VanGoghDev/practicum-metrics/internal/storage"
 	"github.com/VanGoghDev/practicum-metrics/internal/util/converter"
 	"github.com/go-chi/chi"
 	"go.uber.org/zap"
 )
-
-type MetricsProvider interface {
-	Gauges() (gauges []models.Gauge, err error)
-	Counters() (counters []models.Counter, err error)
-	Gauge(name string) (gauge models.Gauge, err error)
-	Counter(name string) (counter models.Counter, err error)
-}
 
 var (
 	errFailedToFetchGauge   = errors.New("failed to fetch gauge")
@@ -32,7 +26,7 @@ const (
 	notFoundErrMsg = "Not found"
 )
 
-func MetricsHandler(zlog *zap.Logger, s MetricsProvider) http.HandlerFunc {
+func MetricsHandler(zlog *zap.Logger, s routers.Storage) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 
@@ -84,7 +78,7 @@ func MetricsHandler(zlog *zap.Logger, s MetricsProvider) http.HandlerFunc {
 	}
 }
 
-func MetricHandler(zlog *zap.Logger, s MetricsProvider) http.HandlerFunc {
+func MetricHandler(zlog *zap.Logger, s routers.Storage) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		var req models.Metrics
@@ -157,7 +151,7 @@ func MetricHandler(zlog *zap.Logger, s MetricsProvider) http.HandlerFunc {
 	}
 }
 
-func MetricHandlerRouterParams(s MetricsProvider) http.HandlerFunc {
+func MetricHandlerRouterParams(s routers.Storage) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 

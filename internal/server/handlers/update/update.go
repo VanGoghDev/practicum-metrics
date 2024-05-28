@@ -7,20 +7,16 @@ import (
 
 	"github.com/VanGoghDev/practicum-metrics/internal/domain/models"
 	"github.com/VanGoghDev/practicum-metrics/internal/server/handlers"
+	"github.com/VanGoghDev/practicum-metrics/internal/server/routers"
 	"github.com/go-chi/chi"
 	"go.uber.org/zap"
 )
-
-type MetricsSaver interface {
-	SaveGauge(name string, value float64) (err error)
-	SaveCount(name string, value int64) (err error)
-}
 
 const (
 	internalErrMsg = "Internal error"
 )
 
-func UpdateHandler(log *zap.Logger, storage MetricsSaver) http.HandlerFunc {
+func UpdateHandler(log *zap.Logger, storage routers.Storage) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		req := &models.Metrics{}
@@ -72,7 +68,7 @@ func UpdateHandler(log *zap.Logger, storage MetricsSaver) http.HandlerFunc {
 	}
 }
 
-func UpdateHandlerRouteParams(log *zap.Logger, storage MetricsSaver) http.HandlerFunc {
+func UpdateHandlerRouteParams(log *zap.Logger, storage routers.Storage) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 

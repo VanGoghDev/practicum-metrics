@@ -5,23 +5,24 @@ import (
 	"github.com/VanGoghDev/practicum-metrics/internal/server/handlers/update"
 	"github.com/VanGoghDev/practicum-metrics/internal/server/middleware/compressor"
 	mwLogger "github.com/VanGoghDev/practicum-metrics/internal/server/middleware/logger"
+	"github.com/VanGoghDev/practicum-metrics/internal/server/routers"
 	"github.com/go-chi/chi"
 	"go.uber.org/zap"
 )
 
-func BuildRouter(s update.MetricsSaver, p metrics.MetricsProvider, log *zap.Logger) chi.Router {
+func BuildRouter(s routers.Storage, log *zap.Logger) chi.Router {
 	r := chi.NewRouter()
 
 	r.Use(compressor.New(log))
 	r.Use(mwLogger.New(log))
 
 	r.Route("/", func(r chi.Router) {
-		r.Get("/", metrics.MetricsHandler(log, p))
+		r.Get("/", metrics.MetricsHandler(log, s))
 	})
 
 	r.Route("/value", func(r chi.Router) {
-		r.Post("/", metrics.MetricHandler(log, p))
-		r.Get("/{type}/{name}", metrics.MetricHandlerRouterParams(p))
+		r.Post("/", metrics.MetricHandler(log, s))
+		r.Get("/{type}/{name}", metrics.MetricHandlerRouterParams(s))
 	})
 
 	r.Route("/update", func(r chi.Router) {

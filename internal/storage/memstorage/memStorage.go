@@ -14,8 +14,8 @@ type MemStorage struct {
 	CountersM map[string]int64
 }
 
-func New(zlog *zap.Logger) (MemStorage, error) {
-	s := MemStorage{
+func New(zlog *zap.Logger) (*MemStorage, error) {
+	s := &MemStorage{
 		zlog:      zlog,
 		GaugesM:   make(map[string]float64),
 		CountersM: make(map[string]int64),
