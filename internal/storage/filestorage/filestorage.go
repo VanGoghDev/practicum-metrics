@@ -9,8 +9,8 @@ import (
 
 	"github.com/VanGoghDev/practicum-metrics/internal/domain/models"
 	"github.com/VanGoghDev/practicum-metrics/internal/server/config"
-	"github.com/VanGoghDev/practicum-metrics/internal/storage"
 	"github.com/VanGoghDev/practicum-metrics/internal/storage/memstorage"
+	"github.com/VanGoghDev/practicum-metrics/internal/storage/serrors"
 	"go.uber.org/zap"
 )
 
@@ -45,7 +45,7 @@ func New(zlog *zap.Logger, cfg *config.Config) (*FileStorage, error) {
 	f.MemStorage.CountersM = make(map[string]int64)
 
 	if cfg.Restore && f.file != nil {
-		err := f.Restore()
+		err := f.restore()
 		if err != nil {
 			return nil, fmt.Errorf("failed to restore file storage: %w", err)
 		}
@@ -55,7 +55,7 @@ func New(zlog *zap.Logger, cfg *config.Config) (*FileStorage, error) {
 
 func (f *FileStorage) SaveGauge(name string, value float64) (err error) {
 	if f.MemStorage.GaugesM == nil {
-		return storage.ErrGaugesTableNil
+		return serrors.ErrGaugesTableNil
 	}
 
 	f.MemStorage.GaugesM[name] = value
@@ -77,7 +77,7 @@ func (f *FileStorage) SaveGauge(name string, value float64) (err error) {
 
 func (f *FileStorage) SaveCount(name string, value int64) (err error) {
 	if f.MemStorage.CountersM == nil {
-		return storage.ErrCountersTableNil
+		return serrors.ErrCountersTableNil
 	}
 
 	f.MemStorage.CountersM[name] += value
@@ -111,8 +111,8 @@ func (f *FileStorage) SaveToFile(data []byte) error {
 	return nil
 }
 
-func (f *FileStorage) Restore() error {
-	f.zlog.Info("restoring metrics from file!")
+func (f *FileStorage) restore() error {
+	f.zlog.Info("restoring metrics from file...")
 	metrics := make([]*models.Metrics, 0)
 	for f.scanner.Scan() {
 		metric := models.Metrics{}

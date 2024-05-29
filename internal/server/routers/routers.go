@@ -9,4 +9,5 @@ type Storage interface {
 	Counters() (counters []models.Counter, err error)
 	Gauge(name string) (gauge models.Gauge, err error)
 	Counter(name string) (counter models.Counter, err error)
+	Close() error
 }

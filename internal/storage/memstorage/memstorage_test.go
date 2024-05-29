@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	"github.com/VanGoghDev/practicum-metrics/internal/server/logger"
-	"github.com/VanGoghDev/practicum-metrics/internal/storage"
+	"github.com/VanGoghDev/practicum-metrics/internal/storage/serrors"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -58,7 +58,7 @@ func TestGauge(t *testing.T) {
 				name: "test",
 			},
 			want: want{
-				err: storage.ErrNotFound,
+				err: serrors.ErrNotFound,
 			},
 		},
 	}
@@ -116,7 +116,7 @@ func TestCounter(t *testing.T) {
 				name: "test",
 			},
 			want: want{
-				err: storage.ErrNotFound,
+				err: serrors.ErrNotFound,
 			},
 		},
 	}
@@ -160,7 +160,7 @@ func TestSaveCount(t *testing.T) {
 				value: 20,
 			},
 			want: want{
-				err: storage.ErrCountersTableNil,
+				err: serrors.ErrCountersTableNil,
 			},
 		},
 		{
@@ -223,7 +223,7 @@ func TestSaveGauge(t *testing.T) {
 				value: 20,
 			},
 			want: want{
-				err: storage.ErrGaugesTableNil,
+				err: serrors.ErrGaugesTableNil,
 			},
 		},
 		{

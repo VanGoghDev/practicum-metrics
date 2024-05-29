@@ -16,13 +16,13 @@ const (
 	internalErrMsg = "Internal error"
 )
 
-func UpdateHandler(log *zap.Logger, storage routers.Storage) http.HandlerFunc {
+func UpdateHandler(zlog *zap.SugaredLogger, storage routers.Storage) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		req := &models.Metrics{}
 		dec := json.NewDecoder(r.Body)
 		if err := dec.Decode(&req); err != nil {
-			log.Sugar().Warnf("failed to decode JSON body", zap.Error(err))
+			zlog.Warnf("failed to decode JSON body", zap.Error(err))
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
@@ -41,14 +41,14 @@ func UpdateHandler(log *zap.Logger, storage routers.Storage) http.HandlerFunc {
 		case handlers.Gauge:
 			err := storage.SaveGauge(req.ID, *req.Value)
 			if err != nil {
-				log.Sugar().Warnf("failed to save gauge: %v", err) // переделать лог
+				zlog.Warnf("failed to save gauge: %v", err) // переделать лог
 				http.Error(w, internalErrMsg, http.StatusInternalServerError)
 				return
 			}
 		case handlers.Counter:
 			err := storage.SaveCount(req.ID, *req.Delta)
 			if err != nil {
-				log.Sugar().Warnf("failed to save counter: %v", err) // переделать лог
+				zlog.Warnf("failed to save counter: %v", err) // переделать лог
 				http.Error(w, "Internal error", http.StatusInternalServerError)
 				return
 			}
@@ -62,13 +62,13 @@ func UpdateHandler(log *zap.Logger, storage routers.Storage) http.HandlerFunc {
 		}
 		enc := json.NewEncoder(w)
 		if err := enc.Encode(resp); err != nil {
-			log.Sugar().Warnf("error encoding response %v", err)
+			zlog.Warnf("error encoding response %v", err)
 			return
 		}
 	}
 }
 
-func UpdateHandlerRouteParams(log *zap.Logger, storage routers.Storage) http.HandlerFunc {
+func UpdateHandlerRouteParams(zlog *zap.SugaredLogger, storage routers.Storage) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 
@@ -91,7 +91,7 @@ func UpdateHandlerRouteParams(log *zap.Logger, storage routers.Storage) http.Han
 			if val, err := strconv.ParseFloat(mVal, 64); err == nil {
 				err := storage.SaveGauge(mName, val)
 				if err != nil {
-					log.Sugar().Warnf("failed to save gauge: %v", err)
+					zlog.Warnf("failed to save gauge: %v", err)
 					http.Error(w, "Internal error", http.StatusInternalServerError)
 					return
 				}
@@ -105,7 +105,7 @@ func UpdateHandlerRouteParams(log *zap.Logger, storage routers.Storage) http.Han
 			if val, err := strconv.ParseInt(mVal, 0, 64); err == nil {
 				err := storage.SaveCount(mName, val)
 				if err != nil {
-					log.Sugar().Warnf("failed to save counter: %v", err)
+					zlog.Warnf("failed to save counter: %v", err)
 					http.Error(w, "Internal error", http.StatusInternalServerError)
 					return
 				}

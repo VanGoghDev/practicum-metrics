@@ -3,7 +3,7 @@ package main
 import (
 	"log"
 
-	agent "github.com/VanGoghDev/practicum-metrics/internal/agent/app"
+	"github.com/VanGoghDev/practicum-metrics/internal/agent/app"
 	"github.com/VanGoghDev/practicum-metrics/internal/agent/config"
 	"github.com/VanGoghDev/practicum-metrics/internal/agent/logger"
 )
@@ -22,8 +22,8 @@ func main() {
 
 	zlog.Info("Logger init")
 
-	app := agent.New(zlog, cfg)
-	err = app.RunApp()
+	agent := app.New(zlog, cfg)
+	err = agent.RunApp()
 	if err != nil {
 		log.Fatalf("failed to run an app: %v", err)
 	}

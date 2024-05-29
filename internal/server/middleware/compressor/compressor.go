@@ -12,6 +12,7 @@ import (
 
 // CompressWriter implements http.ResponseWriter.
 type CompressWriter struct {
+	http.ResponseWriter
 	w  http.ResponseWriter
 	zw *gzip.Writer
 }
@@ -29,14 +30,6 @@ func (cw CompressWriter) Write(data []byte) (int, error) {
 		return http.StatusInternalServerError, fmt.Errorf("failed to %w", err)
 	}
 	return code, nil
-}
-
-func (cw CompressWriter) WriteHeader(statusCode int) {
-	cw.w.WriteHeader(statusCode)
-}
-
-func (cw CompressWriter) Header() http.Header {
-	return cw.w.Header()
 }
 
 // Close закрывает gzip.Writer и досылает все данные из буфера.
@@ -73,20 +66,23 @@ func (c *CompressReader) Read(p []byte) (n int, err error) {
 	return code, nil
 }
 
-// Close implements io.ReadCloser.
 func (c *CompressReader) Close() error {
 	err := c.r.Close()
 	if err != nil {
 		return fmt.Errorf("failed to close io.ReadCloser: %w", err)
 	}
-	err = c.zr.Close()
+	return nil
+}
+
+func (c *CompressReader) CloseGzRReader() error {
+	err := c.zr.Close()
 	if err != nil {
 		return fmt.Errorf("failed to close gzip.Reader: %w", err)
 	}
 	return nil
 }
 
-func New(log *zap.Logger) func(next http.Handler) http.Handler {
+func New(zlog *zap.SugaredLogger) func(next http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		fn := func(w http.ResponseWriter, r *http.Request) {
 			ow := w
@@ -108,11 +104,11 @@ func New(log *zap.Logger) func(next http.Handler) http.Handler {
 
 			// Если данные пришли в сжатом формате, то заменим body после декомпрессии.
 			if strings.Contains(r.Header.Get("Content-Encoding"), "gzip") {
-				log.Info("reading compressed body")
+				zlog.Info("reading compressed body")
 
 				cr, err := NewCompressReader(r.Body)
 				if err != nil {
-					log.Warn(fmt.Sprintf("Unable to create CompressReader: %v", err))
+					zlog.Warnf("Unable to create CompressReader: %v", err)
 					w.WriteHeader(http.StatusInternalServerError)
 					return
 				}
@@ -120,7 +116,7 @@ func New(log *zap.Logger) func(next http.Handler) http.Handler {
 				defer func() {
 					err = cr.Close()
 					if err != nil {
-						log.Warn(fmt.Sprintf("failed to close compress reader: %v", err))
+						zlog.Warnf("failed to close compress reader: %v", err)
 						w.WriteHeader(http.StatusInternalServerError)
 						return
 					}
