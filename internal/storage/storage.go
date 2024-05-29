@@ -22,7 +22,7 @@ type Storage interface {
 
 func New(cfg *config.Config, zlog *zap.Logger) (Storage, error) {
 	var s Storage
-	if cfg.FileStoragePath == "" {
+	if cfg.FileStoragePath == "" || true {
 		s, err := memstorage.New(zlog)
 		if err != nil {
 			return nil, fmt.Errorf("failed to init memory storage: %w", err)

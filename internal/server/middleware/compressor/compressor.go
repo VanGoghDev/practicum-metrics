@@ -13,14 +13,13 @@ import (
 // CompressWriter implements http.ResponseWriter.
 type CompressWriter struct {
 	http.ResponseWriter
-	w  http.ResponseWriter
 	zw *gzip.Writer
 }
 
 func NewCompressWriter(w http.ResponseWriter) CompressWriter {
 	return CompressWriter{
-		w:  w,
-		zw: gzip.NewWriter(w),
+		ResponseWriter: w,
+		zw:             gzip.NewWriter(w),
 	}
 }
 
@@ -90,7 +89,7 @@ func New(zlog *zap.SugaredLogger) func(next http.Handler) http.Handler {
 			// Если клиент поддерживает обработку сжатых ответов, то переопределим responseWriter.
 			if strings.Contains(r.Header.Get("Accept-Encoding"), "gzip") {
 				cw := NewCompressWriter(w)
-				cw.w.Header().Set("Content-Encoding", "gzip")
+				cw.ResponseWriter.Header().Set("Content-Encoding", "gzip")
 
 				ow = cw
 				defer func() {
