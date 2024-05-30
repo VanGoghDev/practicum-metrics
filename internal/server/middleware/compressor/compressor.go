@@ -103,7 +103,7 @@ func New(zlog *zap.SugaredLogger) func(next http.Handler) http.Handler {
 
 			// Если данные пришли в сжатом формате, то заменим body после декомпрессии.
 			if strings.Contains(r.Header.Get("Content-Encoding"), "gzip") {
-				zlog.Info("reading compressed body")
+				zlog.Debug("reading compressed body")
 
 				cr, err := NewCompressReader(r.Body)
 				if err != nil {

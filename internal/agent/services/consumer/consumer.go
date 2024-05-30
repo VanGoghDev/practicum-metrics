@@ -6,10 +6,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
 	"net/http"
 
 	"github.com/VanGoghDev/practicum-metrics/internal/domain/models"
+	"go.uber.org/zap"
 )
 
 type HTTPClient interface {
@@ -21,13 +21,15 @@ type MetricsProvider interface {
 }
 
 type ServerConsumer struct {
+	zlog            *zap.Logger
 	metricsProvider MetricsProvider
 	client          HTTPClient
 	url             string
 }
 
-func New(metricsProvider MetricsProvider, client HTTPClient, url string) *ServerConsumer {
+func New(zlog *zap.Logger, metricsProvider MetricsProvider, client HTTPClient, url string) *ServerConsumer {
 	return &ServerConsumer{
+		zlog:            zlog,
 		metricsProvider: metricsProvider,
 		client:          client,
 		url:             url,
@@ -73,7 +75,7 @@ func (s *ServerConsumer) SendMetrics(metrics []*models.Metrics) error {
 func (s *ServerConsumer) sendRequest(request *http.Request) error {
 	resp, err := s.client.Do(request)
 	if err != nil {
-		log.Printf("unexpected error %v", err)
+		s.zlog.Sugar().Errorf("unexpected error %w", err)
 		return fmt.Errorf("failed to save gauge on server %w", err)
 	}
 	defer func() {

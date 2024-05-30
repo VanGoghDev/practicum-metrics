@@ -177,7 +177,7 @@ func MetricHandlerRouterParams(zlog *zap.SugaredLogger, s routers.Storage) http.
 				}
 				sV, err := converter.Str(counter.Value)
 				if err != nil {
-					log.Printf("failed to convert counter value to string: %v", err)
+					zlog.Errorf("failed to convert counter value to string: %w", err)
 					http.Error(w, internalErrMsg, http.StatusInternalServerError)
 					return
 				}
@@ -200,19 +200,19 @@ func MetricHandlerRouterParams(zlog *zap.SugaredLogger, s routers.Storage) http.
 						http.Error(w, "Not found", http.StatusNotFound)
 						return
 					}
-					log.Printf("%v", errFailedToFetchGauge)
+					zlog.Errorf("%v: %w", err)
 					http.Error(w, internalErrMsg, http.StatusInternalServerError)
 					return
 				}
 				sV, err := converter.Str(gauge.Value)
 				if err != nil {
-					log.Printf("failed to convert gauge value to string: %v", err)
+					zlog.Errorf("failed to convert gauge value to string: %w", err)
 					http.Error(w, internalErrMsg, http.StatusInternalServerError)
 					return
 				}
 				_, err = fmt.Fprintf(w, "%s", sV)
 				if err != nil {
-					log.Printf("%v", errFailedToFetchGauge)
+					zlog.Errorf("%v", errFailedToFetchGauge)
 					http.Error(w, internalErrMsg, http.StatusInternalServerError)
 					return
 				}

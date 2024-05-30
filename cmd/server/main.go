@@ -30,7 +30,7 @@ func run() error {
 		return fmt.Errorf("failed to init logger %w", err)
 	}
 	zlog.Info("Logger init")
-	zlog.Sugar().Info(cfg)
+	zlog.Sugar().Debug(cfg)
 
 	// storage
 	s, err := storage.New(cfg, zlog)

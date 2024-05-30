@@ -75,16 +75,13 @@ func (s *MemStorage) Gauge(name string) (gauge models.Gauge, err error) {
 	if s == nil || s.GaugesM == nil {
 		return models.Gauge{}, serrors.ErrCountersTableNil
 	}
-	s.zlog.Info("getting gauge")
 
 	if name == "" {
 		return models.Gauge{}, serrors.ErrNotFound
 	}
 	if v, ok := s.GaugesM[name]; !ok {
-		s.zlog.Info("gauge does not exist")
 		return models.Gauge{}, serrors.ErrNotFound
 	} else {
-		s.zlog.Info("gauge does not exist")
 
 		gauge = models.Gauge{
 			Name:  name,
@@ -98,21 +95,14 @@ func (s *MemStorage) Counter(name string) (counter models.Counter, err error) {
 	if s == nil || s.CountersM == nil {
 		return models.Counter{}, serrors.ErrCountersTableNil
 	}
-	s.zlog.Info("getting counter")
 
 	if name == "" {
-		s.zlog.Info("name is empty")
-
 		return models.Counter{}, serrors.ErrNotFound
 	}
 
 	if v, ok := s.CountersM[name]; !ok {
-		s.zlog.Info("counter not found")
-
 		return models.Counter{}, serrors.ErrNotFound
 	} else {
-		s.zlog.Info("counter found")
-
 		counter = models.Counter{
 			Name:  name,
 			Value: v,

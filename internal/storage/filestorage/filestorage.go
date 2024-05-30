@@ -112,13 +112,12 @@ func (f *FileStorage) SaveToFile(data []byte) error {
 }
 
 func (f *FileStorage) restore() error {
-	f.zlog.Info("restoring metrics from file...")
+	f.zlog.Debug("restoring metrics from file...")
 	metrics := make([]*models.Metrics, 0)
 	for f.scanner.Scan() {
 		metric := models.Metrics{}
 		data := f.scanner.Bytes()
 		if len(data) > 0 {
-			f.zlog.Info("data:", zap.String("data:", string(data)))
 			err := json.Unmarshal(data, &metric)
 			if err != nil {
 				fmt.Println(f.scanner.Text())
@@ -129,8 +128,8 @@ func (f *FileStorage) restore() error {
 	}
 	if err := f.scanner.Err(); err != nil {
 		f.zlog.Sugar().Warnf("failed to scan file: %v", err)
+		return fmt.Errorf("failed to scan file: %w", err)
 	}
-	f.zlog.Info("got metrics from file!")
 
 	for _, v := range metrics {
 		switch v.MType {

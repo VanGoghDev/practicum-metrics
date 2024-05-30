@@ -33,7 +33,7 @@ type App struct {
 
 func New(log *zap.Logger, cfg *config.Config) *App {
 	metricsService := metrics.New(log)
-	csmr := consumer.New(metricsService, &http.Client{}, cfg.Address)
+	csmr := consumer.New(log, metricsService, &http.Client{}, cfg.Address)
 
 	return &App{
 		Log:             log,
