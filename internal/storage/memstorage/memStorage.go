@@ -82,7 +82,6 @@ func (s *MemStorage) Gauge(name string) (gauge models.Gauge, err error) {
 	if v, ok := s.GaugesM[name]; !ok {
 		return models.Gauge{}, serrors.ErrNotFound
 	} else {
-
 		gauge = models.Gauge{
 			Name:  name,
 			Value: v,
