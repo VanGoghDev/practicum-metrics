@@ -3,14 +3,14 @@ package app
 import (
 	"errors"
 	"fmt"
-	"log"
-	"math/rand"
 	"net/http"
 	"time"
 
 	"github.com/VanGoghDev/practicum-metrics/internal/agent/config"
 	"github.com/VanGoghDev/practicum-metrics/internal/agent/services/consumer"
 	"github.com/VanGoghDev/practicum-metrics/internal/agent/services/metrics"
+	"github.com/VanGoghDev/practicum-metrics/internal/domain/models"
+	"go.uber.org/zap"
 )
 
 var (
@@ -19,12 +19,11 @@ var (
 )
 
 type ServerConsumer interface {
-	SendRuntimeGauge(metrics map[string]any) error
-	SendCounter(name string, value int64) error
-	SendGauge(name string, value float64) error
+	SendMetrics(metrics []*models.Metrics) error
 }
 
 type App struct {
+	Log             *zap.Logger
 	Consumer        ServerConsumer
 	MetricsProvider consumer.MetricsProvider
 
@@ -32,11 +31,12 @@ type App struct {
 	pollInterval   time.Duration
 }
 
-func New(cfg *config.Config) *App {
-	metricsService := metrics.New()
-	csmr := consumer.New(metricsService, &http.Client{}, cfg.Address)
+func New(log *zap.Logger, cfg *config.Config) *App {
+	metricsService := metrics.New(log)
+	csmr := consumer.New(log, metricsService, &http.Client{}, cfg.Address)
 
 	return &App{
+		Log:             log,
 		Consumer:        csmr,
 		MetricsProvider: metricsService,
 		reportInterval:  cfg.ReportInterval,
@@ -62,7 +62,7 @@ func (a *App) Run() error {
 	}
 
 	pollCount := 0
-	gauges, err := a.MetricsProvider.ReadMetrics()
+	metricsV, err := a.MetricsProvider.ReadMetrics(int64(pollCount))
 	if err != nil {
 		return fmt.Errorf("failed to read metrics %s: %w", op, err)
 	}
@@ -77,27 +77,16 @@ func (a *App) Run() error {
 		select {
 		case <-pollTicker.C:
 			pollCount++
-			gauges, err = a.MetricsProvider.ReadMetrics()
+			metricsV, err = a.MetricsProvider.ReadMetrics(int64(pollCount))
 			if err != nil {
-				return fmt.Errorf("failed to read metrics %w", err)
+				a.Log.Warn(fmt.Sprintf("failed to read metrics %s", err))
 			}
 		case <-reportTicker.C:
-			err := a.Consumer.SendRuntimeGauge(gauges)
+			err = a.Consumer.SendMetrics(metricsV)
 			if err != nil {
-				log.Printf("failed to send metrics to server: %v", err)
-				continue
-			}
-
-			err = a.Consumer.SendCounter("PollCount", int64(pollCount))
-			if err != nil {
-				return fmt.Errorf("failed to send count %w", err)
+				a.Log.Warn(fmt.Sprintf("failed to send metrics %s", err))
 			}
 			pollCount = 0
-
-			err = a.Consumer.SendGauge("RandomValue", rand.Float64())
-			if err != nil {
-				return fmt.Errorf("failed to send random value %w", err)
-			}
 		}
 	}
 }

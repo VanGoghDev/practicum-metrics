@@ -3,8 +3,9 @@ package main
 import (
 	"log"
 
-	agent "github.com/VanGoghDev/practicum-metrics/internal/agent/app"
+	"github.com/VanGoghDev/practicum-metrics/internal/agent/app"
 	"github.com/VanGoghDev/practicum-metrics/internal/agent/config"
+	"github.com/VanGoghDev/practicum-metrics/internal/agent/logger"
 )
 
 func main() {
@@ -13,8 +14,16 @@ func main() {
 		log.Fatalf("failed to load config: %v", err)
 	}
 
-	app := agent.New(cfg)
-	err = app.RunApp()
+	// logger
+	zlog, err := logger.New(cfg.Loglevel)
+	if err != nil {
+		log.Fatal("failed to init logger %w", err)
+	}
+
+	zlog.Info("Logger init")
+
+	agent := app.New(zlog, cfg)
+	err = agent.RunApp()
 	if err != nil {
 		log.Fatalf("failed to run an app: %v", err)
 	}

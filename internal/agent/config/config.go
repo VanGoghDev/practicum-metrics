@@ -3,6 +3,7 @@ package config
 import (
 	"flag"
 	"fmt"
+	"os"
 	"time"
 
 	"github.com/caarlos0/env"
@@ -10,6 +11,7 @@ import (
 
 type Config struct {
 	Address        string        `env:"ADDRESS"`
+	Loglevel       string        `env:"LOGLVL"`
 	ReportInterval time.Duration `env:"REPORTINTERVAL"`
 	PollInterval   time.Duration `env:"POLLINTERVAL"`
 }
@@ -26,26 +28,31 @@ func Load() (config *Config, err error) {
 		return nil, fmt.Errorf("failed to parse config %w", err)
 	}
 
-	var flagAddress string
-	flag.StringVar(&flagAddress, "a", "localhost:8080", "address and port to run server")
-
 	var reportInteval, pollInterval int64
+	var logLevel, flagAddress string
+
+	flag.StringVar(&flagAddress, "a", "localhost:8080", "address and port to run server")
 	flag.Int64Var(&reportInteval,
 		"r", defaultReportInterval,
 		"report interval (interval of requests to consumer, in seconds)")
 	flag.Int64Var(&pollInterval, "p", defaultPollInterval, "poll interval (interval of metrics fetch, in seconds)")
+	flag.StringVar(&logLevel, "lvl", "info", "log level")
 
 	flag.Parse()
 
-	if cfg.Address == "" {
+	if _, present := os.LookupEnv("ADDRESS"); !present {
 		cfg.Address = flagAddress
 	}
 
-	if cfg.ReportInterval == 0 {
+	if _, present := os.LookupEnv("LOGLVL"); !present {
+		cfg.Loglevel = logLevel
+	}
+
+	if _, present := os.LookupEnv("REPORTINTERVAL"); !present {
 		cfg.ReportInterval = time.Duration(reportInteval) * time.Second
 	}
 
-	if cfg.PollInterval == 0 {
+	if _, present := os.LookupEnv("POLLINTERVAL"); !present {
 		cfg.PollInterval = time.Duration(pollInterval) * time.Second
 	}
 

@@ -6,8 +6,9 @@ import (
 	"net/http"
 
 	"github.com/VanGoghDev/practicum-metrics/internal/server/config"
+	"github.com/VanGoghDev/practicum-metrics/internal/server/logger"
 	"github.com/VanGoghDev/practicum-metrics/internal/server/routers/chirouter"
-	"github.com/VanGoghDev/practicum-metrics/internal/storage/memstorage"
+	"github.com/VanGoghDev/practicum-metrics/internal/storage"
 )
 
 func main() {
@@ -22,18 +23,32 @@ func run() error {
 	if err != nil {
 		return fmt.Errorf("failed to load config %w", err)
 	}
+
 	// logger
+	zlog, err := logger.New(cfg.Loglevel)
+	if err != nil {
+		return fmt.Errorf("failed to init logger %w", err)
+	}
+	zlog.Info("Logger init")
+	zlog.Sugar().Debug(cfg)
 
 	// storage
-	s, err := memstorage.New()
+	s, err := storage.New(cfg, zlog)
+	defer func() {
+		err = s.Close()
+	}()
+
 	if err != nil {
 		return fmt.Errorf("failed to init storage %w", err)
 	}
 
 	// router
-	router := chirouter.BuildRouter(&s, &s)
+	router := chirouter.BuildRouter(s, zlog)
 
-	log.Printf("Server start and running on port %s \n", cfg.Address)
 	err = http.ListenAndServe(cfg.Address, router)
-	return fmt.Errorf("failed to serve: %w", err)
+	if err != nil {
+		return fmt.Errorf("failed to start http server: %w", err)
+	}
+
+	return fmt.Errorf("failed to run app: %w", err)
 }
