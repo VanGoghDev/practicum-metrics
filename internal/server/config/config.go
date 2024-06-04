@@ -15,8 +15,8 @@ type Config struct {
 	Loglevel           string `env:"LOGLVL"`
 	FileStoragePath    string `env:"FILE_STORAGE_PATH"`
 	Restore            bool   `env:"RESTORE"`
-	StoreInterval      time.Duration
 	DBConnectionString string `env:"DATABASE_DSN"`
+	StoreInterval      time.Duration
 }
 
 const (
