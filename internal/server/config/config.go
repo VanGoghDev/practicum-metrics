@@ -14,8 +14,8 @@ type Config struct {
 	Address            string `env:"ADDRESS"`
 	Loglevel           string `env:"LOGLVL"`
 	FileStoragePath    string `env:"FILE_STORAGE_PATH"`
-	Restore            bool   `env:"RESTORE"`
 	DBConnectionString string `env:"DATABASE_DSN"`
+	Restore            bool   `env:"RESTORE"`
 	StoreInterval      time.Duration
 }
 
