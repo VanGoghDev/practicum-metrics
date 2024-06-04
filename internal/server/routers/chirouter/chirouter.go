@@ -1,7 +1,9 @@
 package chirouter
 
 import (
+	"github.com/VanGoghDev/practicum-metrics/internal/server/config"
 	"github.com/VanGoghDev/practicum-metrics/internal/server/handlers/metrics"
+	"github.com/VanGoghDev/practicum-metrics/internal/server/handlers/ping"
 	"github.com/VanGoghDev/practicum-metrics/internal/server/handlers/update"
 	"github.com/VanGoghDev/practicum-metrics/internal/server/middleware/compressor"
 	"github.com/VanGoghDev/practicum-metrics/internal/server/middleware/logger"
@@ -10,7 +12,7 @@ import (
 	"go.uber.org/zap"
 )
 
-func BuildRouter(s routers.Storage, log *zap.Logger) chi.Router {
+func BuildRouter(s routers.Storage, log *zap.Logger, cfg *config.Config) chi.Router {
 	r := chi.NewRouter()
 	sugarlog := log.Sugar()
 	r.Use(logger.New(sugarlog))
@@ -28,6 +30,10 @@ func BuildRouter(s routers.Storage, log *zap.Logger) chi.Router {
 	r.Route("/update", func(r chi.Router) {
 		r.Post("/", update.UpdateHandler(sugarlog, s))
 		r.Post("/{type}/{name}/{value}", update.UpdateHandlerRouteParams(sugarlog, s))
+	})
+
+	r.Route("/ping", func(r chi.Router) {
+		r.Get("/", ping.PingHandler(sugarlog, cfg))
 	})
 
 	return r

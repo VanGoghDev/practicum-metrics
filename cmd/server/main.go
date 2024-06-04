@@ -43,7 +43,7 @@ func run() error {
 	}
 
 	// router
-	router := chirouter.BuildRouter(s, zlog)
+	router := chirouter.BuildRouter(s, zlog, cfg)
 
 	err = http.ListenAndServe(cfg.Address, router)
 	if err != nil {
