@@ -2,6 +2,7 @@ package filestorage
 
 import (
 	"bufio"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io/fs"
@@ -22,7 +23,7 @@ type FileStorage struct {
 	scanner *bufio.Scanner
 }
 
-func New(zlog *zap.Logger, cfg *config.Config) (*FileStorage, error) {
+func New(ctx context.Context, zlog *zap.Logger, cfg *config.Config) (*FileStorage, error) {
 	var perm fs.FileMode = 0o666
 	file, err := os.OpenFile(cfg.FileStoragePath, os.O_RDWR|os.O_CREATE, perm)
 	if err != nil {
@@ -45,7 +46,7 @@ func New(zlog *zap.Logger, cfg *config.Config) (*FileStorage, error) {
 	f.MemStorage.CountersM = make(map[string]int64)
 
 	if cfg.Restore && f.file != nil {
-		err := f.restore()
+		err := f.restore(ctx)
 		if err != nil {
 			return nil, fmt.Errorf("failed to restore file storage: %w", err)
 		}
@@ -53,7 +54,7 @@ func New(zlog *zap.Logger, cfg *config.Config) (*FileStorage, error) {
 	return f, nil
 }
 
-func (f *FileStorage) SaveGauge(name string, value float64) (err error) {
+func (f *FileStorage) SaveGauge(ctx context.Context, name string, value float64) (err error) {
 	if f.MemStorage.GaugesM == nil {
 		return serrors.ErrGaugesTableNil
 	}
@@ -72,10 +73,10 @@ func (f *FileStorage) SaveGauge(name string, value float64) (err error) {
 	// добавим символ переноса строки
 	data = append(data, '\n')
 
-	return f.SaveToFile(data)
+	return f.SaveToFile(ctx, data)
 }
 
-func (f *FileStorage) SaveCount(name string, value int64) (err error) {
+func (f *FileStorage) SaveCount(ctx context.Context, name string, value int64) (err error) {
 	if f.MemStorage.CountersM == nil {
 		return serrors.ErrCountersTableNil
 	}
@@ -94,10 +95,10 @@ func (f *FileStorage) SaveCount(name string, value int64) (err error) {
 	// добавим символ переноса строки
 	data = append(data, '\n')
 
-	return f.SaveToFile(data)
+	return f.SaveToFile(ctx, data)
 }
 
-func (f *FileStorage) SaveToFile(data []byte) error {
+func (f *FileStorage) SaveToFile(ctx context.Context, data []byte) error {
 	_, err := f.writer.Write(data)
 
 	if err != nil {
@@ -111,7 +112,7 @@ func (f *FileStorage) SaveToFile(data []byte) error {
 	return nil
 }
 
-func (f *FileStorage) restore() error {
+func (f *FileStorage) restore(ctx context.Context) error {
 	f.zlog.Debug("restoring metrics from file...")
 	metrics := make([]*models.Metrics, 0)
 	for f.scanner.Scan() {
@@ -134,12 +135,12 @@ func (f *FileStorage) restore() error {
 	for _, v := range metrics {
 		switch v.MType {
 		case "gauge":
-			err := f.SaveGauge(v.ID, *v.Value)
+			err := f.SaveGauge(ctx, v.ID, *v.Value)
 			if err != nil {
 				return fmt.Errorf("failed to restore gauge %s: %w", v.ID, err)
 			}
 		case "counter":
-			err := f.SaveCount(v.ID, *v.Delta)
+			err := f.SaveCount(ctx, v.ID, *v.Delta)
 			if err != nil {
 				return fmt.Errorf("failed to restore counter %s: %w", v.ID, err)
 			}
@@ -149,7 +150,7 @@ func (f *FileStorage) restore() error {
 	return nil
 }
 
-func (f *FileStorage) Close() error {
+func (f *FileStorage) Close(ctx context.Context) error {
 	if err := f.file.Close(); err != nil {
 		return fmt.Errorf("Filestorage.Close: %w", err)
 	}

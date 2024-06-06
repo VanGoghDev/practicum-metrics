@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"net/http"
@@ -12,12 +13,12 @@ import (
 )
 
 func main() {
-	if err := run(); err != nil {
+	if err := run(context.Background()); err != nil {
 		log.Fatal("failed to run app %w", err)
 	}
 }
 
-func run() error {
+func run(ctx context.Context) error {
 	// config
 	cfg, err := config.Load()
 	if err != nil {
@@ -33,9 +34,9 @@ func run() error {
 	zlog.Sugar().Debug(cfg)
 
 	// storage
-	s, err := storage.New(cfg, zlog)
+	s, err := storage.New(ctx, cfg, zlog)
 	defer func() {
-		err = s.Close()
+		err = s.Close(ctx)
 	}()
 
 	if err != nil {
@@ -43,7 +44,7 @@ func run() error {
 	}
 
 	// router
-	router := chirouter.BuildRouter(s, zlog, cfg)
+	router := chirouter.BuildRouter(ctx, s, zlog, cfg)
 
 	err = http.ListenAndServe(cfg.Address, router)
 	if err != nil {

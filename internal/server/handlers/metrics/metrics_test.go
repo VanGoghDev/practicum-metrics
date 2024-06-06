@@ -1,6 +1,7 @@
 package metrics_test
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -67,7 +68,7 @@ func TestMetricHandler(t *testing.T) {
 			memstrg, _ := memstorage.New(log)
 			memstrg.CountersM = tt.countersM
 			memstrg.GaugesM = tt.gaugesM
-			r := chirouter.BuildRouter(memstrg, log, nil)
+			r := chirouter.BuildRouter(context.Background(), memstrg, log, nil)
 			srv := httptest.NewServer(r)
 			defer srv.Close()
 

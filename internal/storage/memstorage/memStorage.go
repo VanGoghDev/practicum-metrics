@@ -1,6 +1,7 @@
 package memstorage
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/VanGoghDev/practicum-metrics/internal/domain/models"
@@ -24,7 +25,7 @@ func New(zlog *zap.Logger) (*MemStorage, error) {
 	return s, nil
 }
 
-func (s *MemStorage) SaveGauge(name string, value float64) (err error) {
+func (s *MemStorage) SaveGauge(ctx context.Context, name string, value float64) (err error) {
 	if s == nil || s.GaugesM == nil {
 		return serrors.ErrGaugesTableNil
 	}
@@ -33,7 +34,7 @@ func (s *MemStorage) SaveGauge(name string, value float64) (err error) {
 	return nil
 }
 
-func (s *MemStorage) SaveCount(name string, value int64) (err error) {
+func (s *MemStorage) SaveCount(ctx context.Context, name string, value int64) (err error) {
 	if s == nil || s.CountersM == nil {
 		return serrors.ErrCountersTableNil
 	}
@@ -42,7 +43,7 @@ func (s *MemStorage) SaveCount(name string, value int64) (err error) {
 	return nil
 }
 
-func (s *MemStorage) Gauges() (gauges []models.Gauge, err error) {
+func (s *MemStorage) Gauges(ctx context.Context) (gauges []models.Gauge, err error) {
 	if s == nil || s.GaugesM == nil {
 		return nil, serrors.ErrGaugesTableNil
 	}
@@ -56,7 +57,7 @@ func (s *MemStorage) Gauges() (gauges []models.Gauge, err error) {
 	return gauges, err
 }
 
-func (s *MemStorage) Counters() (counters []models.Counter, err error) {
+func (s *MemStorage) Counters(ctx context.Context) (counters []models.Counter, err error) {
 	if s == nil || s.CountersM == nil {
 		return nil, serrors.ErrCountersTableNil
 	}
@@ -71,7 +72,7 @@ func (s *MemStorage) Counters() (counters []models.Counter, err error) {
 	return counters, err
 }
 
-func (s *MemStorage) Gauge(name string) (gauge models.Gauge, err error) {
+func (s *MemStorage) Gauge(ctx context.Context, name string) (gauge models.Gauge, err error) {
 	if s == nil || s.GaugesM == nil {
 		return models.Gauge{}, serrors.ErrCountersTableNil
 	}
@@ -90,7 +91,7 @@ func (s *MemStorage) Gauge(name string) (gauge models.Gauge, err error) {
 	}
 }
 
-func (s *MemStorage) Counter(name string) (counter models.Counter, err error) {
+func (s *MemStorage) Counter(ctx context.Context, name string) (counter models.Counter, err error) {
 	if s == nil || s.CountersM == nil {
 		return models.Counter{}, serrors.ErrCountersTableNil
 	}
@@ -110,7 +111,7 @@ func (s *MemStorage) Counter(name string) (counter models.Counter, err error) {
 	}
 }
 
-func (s *MemStorage) GetMetrics() ([]*models.Metrics, error) {
+func (s *MemStorage) GetMetrics(ctx context.Context) ([]*models.Metrics, error) {
 	metrics := make([]*models.Metrics, 0)
 	for k, v := range s.CountersM {
 		metrics = append(metrics, &models.Metrics{
@@ -131,16 +132,16 @@ func (s *MemStorage) GetMetrics() ([]*models.Metrics, error) {
 	return metrics, nil
 }
 
-func (s *MemStorage) SaveMetrics(metrics []*models.Metrics) error {
+func (s *MemStorage) SaveMetrics(ctx context.Context, metrics []*models.Metrics) error {
 	for _, v := range metrics {
 		switch v.MType {
 		case "gauge":
-			err := s.SaveGauge(v.ID, *v.Value)
+			err := s.SaveGauge(ctx, v.ID, *v.Value)
 			if err != nil {
 				return fmt.Errorf("failed to save gauge: %w", err)
 			}
 		case "counter":
-			err := s.SaveCount(v.ID, *v.Delta)
+			err := s.SaveCount(ctx, v.ID, *v.Delta)
 			if err != nil {
 				return fmt.Errorf("failed to save counter: %w", err)
 			}
@@ -149,6 +150,6 @@ func (s *MemStorage) SaveMetrics(metrics []*models.Metrics) error {
 	return nil
 }
 
-func (s *MemStorage) Close() error {
+func (s *MemStorage) Close(ctx context.Context) error {
 	return nil
 }

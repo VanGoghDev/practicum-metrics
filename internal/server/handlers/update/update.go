@@ -1,6 +1,7 @@
 package update
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"strconv"
@@ -16,7 +17,7 @@ const (
 	internalErrMsg = "Internal error"
 )
 
-func UpdateHandler(zlog *zap.SugaredLogger, storage routers.Storage) http.HandlerFunc {
+func UpdateHandler(ctx context.Context, zlog *zap.SugaredLogger, storage routers.Storage) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		req := &models.Metrics{}
@@ -39,14 +40,14 @@ func UpdateHandler(zlog *zap.SugaredLogger, storage routers.Storage) http.Handle
 
 		switch req.MType {
 		case handlers.Gauge:
-			err := storage.SaveGauge(req.ID, *req.Value)
+			err := storage.SaveGauge(ctx, req.ID, *req.Value)
 			if err != nil {
 				zlog.Warnf("failed to save gauge: %v", err) // переделать лог
 				http.Error(w, internalErrMsg, http.StatusInternalServerError)
 				return
 			}
 		case handlers.Counter:
-			err := storage.SaveCount(req.ID, *req.Delta)
+			err := storage.SaveCount(ctx, req.ID, *req.Delta)
 			if err != nil {
 				zlog.Warnf("failed to save counter: %v", err) // переделать лог
 				http.Error(w, "Internal error", http.StatusInternalServerError)
@@ -68,7 +69,7 @@ func UpdateHandler(zlog *zap.SugaredLogger, storage routers.Storage) http.Handle
 	}
 }
 
-func UpdateHandlerRouteParams(zlog *zap.SugaredLogger, storage routers.Storage) http.HandlerFunc {
+func UpdateHandlerRouteParams(ctx context.Context, zlog *zap.SugaredLogger, storage routers.Storage) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 
@@ -89,7 +90,7 @@ func UpdateHandlerRouteParams(zlog *zap.SugaredLogger, storage routers.Storage) 
 
 		if mType == handlers.Gauge {
 			if val, err := strconv.ParseFloat(mVal, 64); err == nil {
-				err := storage.SaveGauge(mName, val)
+				err := storage.SaveGauge(ctx, mName, val)
 				if err != nil {
 					zlog.Warnf("failed to save gauge: %v", err)
 					http.Error(w, "Internal error", http.StatusInternalServerError)
@@ -103,7 +104,7 @@ func UpdateHandlerRouteParams(zlog *zap.SugaredLogger, storage routers.Storage) 
 
 		if mType == handlers.Counter {
 			if val, err := strconv.ParseInt(mVal, 0, 64); err == nil {
-				err := storage.SaveCount(mName, val)
+				err := storage.SaveCount(ctx, mName, val)
 				if err != nil {
 					zlog.Warnf("failed to save counter: %v", err)
 					http.Error(w, "Internal error", http.StatusInternalServerError)
