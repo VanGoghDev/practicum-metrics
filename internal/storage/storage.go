@@ -31,16 +31,16 @@ func New(ctx context.Context, cfg *config.Config, zlog *zap.Logger) (Storage, er
 		}
 		return s, nil
 	}
-	if cfg.FileStoragePath != "" {
-		s, err := filestorage.New(ctx, zlog, cfg)
+	if cfg.FileStoragePath == "" {
+		s, err := memstorage.New(zlog)
 		if err != nil {
-			return nil, fmt.Errorf("failed to init file storage: %w", err)
+			return nil, fmt.Errorf("failed to init memory storage: %w", err)
 		}
 		return s, nil
 	}
-	s, err := memstorage.New(zlog)
+	s, err := filestorage.New(ctx, zlog, cfg)
 	if err != nil {
-		return nil, fmt.Errorf("failed to init memory storage: %w", err)
+		return nil, fmt.Errorf("failed to init file storage: %w", err)
 	}
 	return s, nil
 }

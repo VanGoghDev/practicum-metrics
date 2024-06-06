@@ -54,7 +54,7 @@ func Load() (config *Config, err error) {
 	}
 
 	if _, present := os.LookupEnv("DATABASE_DSN"); !present {
-		cfg.DBConnectionString = flagFileStoragePath
+		cfg.DBConnectionString = flagDBConnection
 	}
 
 	if _, present := os.LookupEnv("RESTORE"); !present {
@@ -70,8 +70,6 @@ func Load() (config *Config, err error) {
 		}
 		cfg.StoreInterval = time.Duration(i) * time.Second
 	}
-
-	cfg.DBConnectionString = "host=localhost port=5435 user=postgres password=Kd100817 dbname=template1 sslmode=disable"
 
 	return &cfg, nil
 }
