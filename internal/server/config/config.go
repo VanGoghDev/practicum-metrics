@@ -70,6 +70,5 @@ func Load() (config *Config, err error) {
 		}
 		cfg.StoreInterval = time.Duration(i) * time.Second
 	}
-
 	return &cfg, nil
 }

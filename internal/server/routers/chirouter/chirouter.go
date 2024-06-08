@@ -34,6 +34,10 @@ func BuildRouter(ctx context.Context, s routers.Storage, log *zap.Logger, cfg *c
 		r.Post("/{type}/{name}/{value}", update.UpdateHandlerRouteParams(ctx, sugarlog, s))
 	})
 
+	r.Route("/updates", func(r chi.Router) {
+		r.Post("/", update.UpdatesHandler(ctx, sugarlog, s))
+	})
+
 	r.Route("/ping", func(r chi.Router) {
 		r.Get("/", ping.PingHandler(sugarlog, cfg))
 	})

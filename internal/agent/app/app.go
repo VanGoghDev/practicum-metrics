@@ -7,8 +7,8 @@ import (
 	"time"
 
 	"github.com/VanGoghDev/practicum-metrics/internal/agent/config"
-	"github.com/VanGoghDev/practicum-metrics/internal/agent/services/consumer"
 	"github.com/VanGoghDev/practicum-metrics/internal/agent/services/metrics"
+	"github.com/VanGoghDev/practicum-metrics/internal/agent/services/sender"
 	"github.com/VanGoghDev/practicum-metrics/internal/domain/models"
 	"go.uber.org/zap"
 )
@@ -18,14 +18,14 @@ var (
 	ErrMetricsProviderNil = errors.New("metrics provider is not initialized")
 )
 
-type ServerConsumer interface {
+type Sender interface {
 	SendMetrics(metrics []*models.Metrics) error
 }
 
 type App struct {
 	Log             *zap.Logger
-	Consumer        ServerConsumer
-	MetricsProvider consumer.MetricsProvider
+	Sender          Sender
+	MetricsProvider sender.MetricsProvider
 
 	reportInterval time.Duration
 	pollInterval   time.Duration
@@ -33,11 +33,11 @@ type App struct {
 
 func New(log *zap.Logger, cfg *config.Config) *App {
 	metricsService := metrics.New(log)
-	csmr := consumer.New(log, metricsService, &http.Client{}, cfg.Address)
+	sndr := sender.New(log, metricsService, &http.Client{}, cfg.Address)
 
 	return &App{
 		Log:             log,
-		Consumer:        csmr,
+		Sender:          sndr,
 		MetricsProvider: metricsService,
 		reportInterval:  cfg.ReportInterval,
 		pollInterval:    cfg.PollInterval,
@@ -53,7 +53,7 @@ func (a *App) RunApp() error {
 
 func (a *App) Run() error {
 	const op = "app.Run"
-	if a.Consumer == nil {
+	if a.Sender == nil {
 		return fmt.Errorf("%s: %w", op, ErrConsumerServiceNil)
 	}
 
@@ -82,7 +82,7 @@ func (a *App) Run() error {
 				a.Log.Warn(fmt.Sprintf("failed to read metrics %s", err))
 			}
 		case <-reportTicker.C:
-			err = a.Consumer.SendMetrics(metricsV)
+			err = a.Sender.SendMetrics(metricsV)
 			if err != nil {
 				a.Log.Warn(fmt.Sprintf("failed to send metrics %s", err))
 			}

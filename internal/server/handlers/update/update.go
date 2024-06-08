@@ -21,6 +21,7 @@ func UpdateHandler(ctx context.Context, zlog *zap.SugaredLogger, storage routers
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		req := &models.Metrics{}
+
 		dec := json.NewDecoder(r.Body)
 		if err := dec.Decode(&req); err != nil {
 			zlog.Warnf("failed to decode JSON body", zap.Error(err))
@@ -50,7 +51,7 @@ func UpdateHandler(ctx context.Context, zlog *zap.SugaredLogger, storage routers
 			err := storage.SaveCount(ctx, req.ID, *req.Delta)
 			if err != nil {
 				zlog.Warnf("failed to save counter: %v", err) // переделать лог
-				http.Error(w, "Internal error", http.StatusInternalServerError)
+				http.Error(w, internalErrMsg, http.StatusInternalServerError)
 				return
 			}
 		}
@@ -93,7 +94,7 @@ func UpdateHandlerRouteParams(ctx context.Context, zlog *zap.SugaredLogger, stor
 				err := storage.SaveGauge(ctx, mName, val)
 				if err != nil {
 					zlog.Warnf("failed to save gauge: %v", err)
-					http.Error(w, "Internal error", http.StatusInternalServerError)
+					http.Error(w, internalErrMsg, http.StatusInternalServerError)
 					return
 				}
 			} else {

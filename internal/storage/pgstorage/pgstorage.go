@@ -49,6 +49,37 @@ func New(ctx context.Context, zlog *zap.SugaredLogger, cfg *config.Config) (*PgS
 	}, nil
 }
 
+func (s *PgStorage) SaveMetrics(ctx context.Context, metrics []*models.Metrics) (err error) {
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return fmt.Errorf("failed to begin db transaction: %w", err)
+	}
+
+	stmt, err := tx.PrepareContext(ctx, "INSERT INTO gauges (name, g_type, g_value, delta) VALUES ($1, $2, $3, $4)")
+	defer func() {
+		err = stmt.Close()
+	}()
+
+	if err != nil {
+		return fmt.Errorf("failed to init statement: %w", err)
+	}
+
+	for _, v := range metrics {
+		_, err := stmt.ExecContext(ctx, v.ID, v.MType, v.Delta, v.Value)
+		if err != nil {
+			err := tx.Rollback()
+			return fmt.Errorf("failed to execute insert statement: %w", err)
+		}
+	}
+
+	err = tx.Commit()
+	if err != nil {
+		return fmt.Errorf("failed to commit transaction: %w", err)
+	}
+
+	return nil
+}
+
 func (s *PgStorage) SaveGauge(ctx context.Context, name string, value float64) (err error) {
 	stmt, err := s.db.Prepare("INSERT INTO gauges(name, g_type, g_value, delta) VALUES($1, $2, $3, $4)")
 	defer func() {
@@ -231,8 +262,8 @@ func createSchema(ctx context.Context, db *sql.DB) error {
 			id 		INT PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
 			name 	VARCHAR(200),
 			g_type 	VARCHAR(200) NOT NULL,
-			g_value DOUBLE PRECISION NOT NULL,
-			delta 	DOUBLE PRECISION NOT NULL
+			g_value DOUBLE PRECISION,
+			delta 	DOUBLE PRECISION
 		)`,
 	}
 

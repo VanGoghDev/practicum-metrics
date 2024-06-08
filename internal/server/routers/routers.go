@@ -7,6 +7,7 @@ import (
 )
 
 type Storage interface {
+	SaveMetrics(ctx context.Context, metrics []*models.Metrics) (err error)
 	SaveGauge(ctx context.Context, name string, value float64) (err error)
 	SaveCount(ctx context.Context, name string, value int64) (err error)
 	Gauges(ctx context.Context) (gauges []models.Gauge, err error)

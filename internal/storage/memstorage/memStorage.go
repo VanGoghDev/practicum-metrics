@@ -132,7 +132,7 @@ func (s *MemStorage) GetMetrics(ctx context.Context) ([]*models.Metrics, error) 
 	return metrics, nil
 }
 
-func (s *MemStorage) SaveMetrics(ctx context.Context, metrics []*models.Metrics) error {
+func (s *MemStorage) SaveMetrics(ctx context.Context, metrics []*models.Metrics) (err error) {
 	for _, v := range metrics {
 		switch v.MType {
 		case "gauge":

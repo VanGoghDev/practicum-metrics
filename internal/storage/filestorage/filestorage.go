@@ -10,6 +10,7 @@ import (
 
 	"github.com/VanGoghDev/practicum-metrics/internal/domain/models"
 	"github.com/VanGoghDev/practicum-metrics/internal/server/config"
+	"github.com/VanGoghDev/practicum-metrics/internal/server/handlers"
 	"github.com/VanGoghDev/practicum-metrics/internal/storage/memstorage"
 	"github.com/VanGoghDev/practicum-metrics/internal/storage/serrors"
 	"go.uber.org/zap"
@@ -52,6 +53,27 @@ func New(ctx context.Context, zlog *zap.Logger, cfg *config.Config) (*FileStorag
 		}
 	}
 	return f, nil
+}
+
+func (f *FileStorage) SaveMetrics(ctx context.Context, metrics []*models.Metrics) (err error) {
+	for _, v := range metrics {
+		switch v.MType {
+		case handlers.Counter:
+			err := f.SaveCount(ctx, v.ID, *v.Delta)
+			if err != nil {
+				return fmt.Errorf("failed to save count: %w", err)
+			}
+		case handlers.Gauge:
+			err := f.SaveGauge(ctx, v.ID, *v.Value)
+			if err != nil {
+				return fmt.Errorf("failed to save gauge: %w", err)
+			}
+		default:
+			f.zlog.Sugar().Warnf("metric \"%s\" has unknown type \"%s\".", v.MType, v.MType)
+			continue
+		}
+	}
+	return nil
 }
 
 func (f *FileStorage) SaveGauge(ctx context.Context, name string, value float64) (err error) {
