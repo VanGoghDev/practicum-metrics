@@ -55,20 +55,59 @@ func (s *PgStorage) SaveMetrics(ctx context.Context, metrics []*models.Metrics) 
 		return fmt.Errorf("failed to begin db transaction: %w", err)
 	}
 
-	stmt, err := tx.PrepareContext(ctx, "INSERT INTO gauges (name, g_type, g_value, delta) VALUES ($1, $2, $3, $4)")
+	deleteStmt, err := tx.PrepareContext(ctx, "DELETE FROM gauges WHERE name = $1")
 	defer func() {
-		err = stmt.Close()
+		err = deleteStmt.Close()
 	}()
+	if err != nil {
+		return fmt.Errorf("failed to init delete statement: %w", err)
+	}
 
+	insrtStmt, err := tx.PrepareContext(ctx, "INSERT INTO gauges (name, g_type, g_value, delta) VALUES ($1, $2, $3, $4)")
+	defer func() {
+		err = insrtStmt.Close()
+	}()
 	if err != nil {
 		return fmt.Errorf("failed to init statement: %w", err)
 	}
 
+	updStmt, err := tx.PrepareContext(ctx, "INSERT INTO gauges(name, g_type, g_value, delta) VALUES($1, $2, $3, $4)"+
+		" ON CONFLICT(name) DO UPDATE SET delta = gauges.delta + EXCLUDED.delta")
+	defer func() {
+		err = updStmt.Close()
+	}()
+	if err != nil {
+		return fmt.Errorf("failed to init update statement: %w", err)
+	}
+
 	for _, v := range metrics {
-		_, err := stmt.ExecContext(ctx, v.ID, v.MType, v.Delta, v.Value)
-		if err != nil {
-			err := tx.Rollback()
-			return fmt.Errorf("failed to execute insert statement: %w", err)
+		var defaultValue float64 = 0
+		var defaultDelta int64 = 0
+		if v.Value != nil {
+			defaultValue = *v.Value
+		}
+		if v.Delta != nil {
+			defaultDelta = *v.Delta
+		}
+		switch v.MType {
+		case handlers.Counter:
+			_, err := updStmt.ExecContext(ctx, v.ID, v.MType, defaultValue, defaultDelta)
+			if err != nil {
+				err := tx.Rollback()
+				return fmt.Errorf("failed to execute insert statement: %w", err)
+			}
+		case handlers.Gauge:
+			_, err := deleteStmt.ExecContext(ctx, v.ID)
+			if err != nil {
+				err := tx.Rollback()
+				return fmt.Errorf("failed to execute delete statement: %w", err)
+			}
+
+			_, err = insrtStmt.ExecContext(ctx, v.ID, v.MType, defaultValue, defaultDelta)
+			if err != nil {
+				err := tx.Rollback()
+				return fmt.Errorf("failed to execute insert statement: %w", err)
+			}
 		}
 	}
 
@@ -221,7 +260,7 @@ func (s *PgStorage) Gauge(ctx context.Context, name string) (gauge models.Gauge,
 }
 
 func (s *PgStorage) Counter(ctx context.Context, name string) (counter models.Counter, err error) {
-	stmt, err := s.db.Prepare("SELECT name, g_type, g_value, delta FROM gauges WHERE name = $1")
+	stmt, err := s.db.Prepare("SELECT name, delta FROM gauges WHERE name = $1")
 	if err != nil {
 		return models.Counter{}, fmt.Errorf("failed to prepare counter query: %w", err)
 	}
@@ -259,11 +298,10 @@ func createSchema(ctx context.Context, db *sql.DB) error {
 
 	createSchemaStmts := []string{
 		`CREATE TABLE IF NOT EXISTS gauges(
-			id 		INT PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
-			name 	VARCHAR(200),
+			name 	VARCHAR(200) PRIMARY KEY,
 			g_type 	VARCHAR(200) NOT NULL,
-			g_value DOUBLE PRECISION,
-			delta 	DOUBLE PRECISION
+			g_value DOUBLE PRECISION NOT NULL,
+			delta 	bigint NOT NULL
 		)`,
 	}
 
