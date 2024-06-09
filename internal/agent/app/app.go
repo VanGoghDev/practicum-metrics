@@ -72,7 +72,9 @@ func (a *App) Run() error {
 
 	reportTicker := time.NewTicker(a.reportInterval)
 	defer reportTicker.Stop()
-
+	retriesCount := 0
+	maxRetriesCount := 3
+	f := 2
 	for {
 		select {
 		case <-pollTicker.C:
@@ -84,6 +86,15 @@ func (a *App) Run() error {
 		case <-reportTicker.C:
 			err = a.Sender.SendMetrics(metricsV)
 			if err != nil {
+				if retriesCount >= maxRetriesCount {
+					pollTicker.Stop()
+					reportTicker.Stop()
+					return fmt.Errorf("tried to send metric %d times, error is: %w", retriesCount, err)
+				}
+				retriesCount++
+				newInterval := (retriesCount * f) - 1
+				reportTicker.Stop()
+				reportTicker = time.NewTicker(time.Duration(newInterval) * time.Second)
 				a.Log.Warn(fmt.Sprintf("failed to send metrics %s", err))
 			}
 			pollCount = 0
