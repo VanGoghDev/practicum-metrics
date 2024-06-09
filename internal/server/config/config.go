@@ -70,6 +70,6 @@ func Load() (config *Config, err error) {
 		}
 		cfg.StoreInterval = time.Duration(i) * time.Second
 	}
-	cfg.DBConnectionString = "host=localhost port=5435 user=postgres password=Kd100817 dbname=template1 sslmode=disable"
+	cfg.DBConnectionString = "host=ocalhost port=5435 user=postgres password=Kd100817 dbname=template1 sslmode=disable"
 	return &cfg, nil
 }
