@@ -11,23 +11,25 @@ import (
 	"github.com/VanGoghDev/practicum-metrics/internal/domain/models"
 	"github.com/VanGoghDev/practicum-metrics/internal/server/config"
 	"github.com/VanGoghDev/practicum-metrics/internal/server/handlers"
-	_ "github.com/golang-migrate/migrate/source/file"
+	"github.com/VanGoghDev/practicum-metrics/internal/storage/serrors"
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 	_ "github.com/jackc/pgx/v5/stdlib"
-	_ "github.com/lib/pq"
 
 	"go.uber.org/zap"
 )
 
 type PgStorage struct {
-	db *sql.DB
+	conn *pgxpool.Pool
+	db   *sql.DB
 }
 
-const (
-	stmtErrMsg = "failed to close stmt"
-	pingErrMsg = "failed to connect to db with timeout"
-)
-
 func New(ctx context.Context, zlog *zap.SugaredLogger, cfg *config.Config) (*PgStorage, error) {
+	conn, err := pgxpool.New(ctx, cfg.DBConnectionString)
+	if err != nil {
+		zlog.Warnf("failed to establich connection with db: %w:", err)
+	}
+
 	db, err := sql.Open("pgx", cfg.DBConnectionString)
 	if err != nil {
 		zlog.Warnf("failed to open db: %v", err)
@@ -44,42 +46,30 @@ func New(ctx context.Context, zlog *zap.SugaredLogger, cfg *config.Config) (*PgS
 	}
 
 	return &PgStorage{
-		db: db,
+		conn: conn,
+		db:   db,
 	}, nil
 }
 
 func (s *PgStorage) SaveMetrics(ctx context.Context, metrics []*models.Metrics) (err error) {
-	err = pingWithTimeout(s.db)
-	if err != nil {
-		return fmt.Errorf("%w", err)
-	}
-
-	tx, err := s.db.BeginTx(ctx, nil)
+	tx, err := s.conn.BeginTx(ctx, pgx.TxOptions{})
 	if err != nil {
 		return fmt.Errorf("failed to begin db transaction: %w", err)
 	}
 
-	deleteStmt, err := tx.PrepareContext(ctx, "DELETE FROM metrics WHERE name = $1")
-	defer func() {
-		err = deleteStmt.Close()
-	}()
+	_, err = tx.Prepare(ctx, "delete", "DELETE FROM metrics WHERE name = $1")
 	if err != nil {
 		return fmt.Errorf("failed to init delete statement: %w", err)
 	}
 
-	insrtStmt, err := tx.PrepareContext(ctx, "INSERT INTO metrics (name, g_type, g_value, delta) VALUES ($1, $2, $3, $4)")
-	defer func() {
-		err = insrtStmt.Close()
-	}()
+	_, err = tx.Prepare(ctx, "insrtStmt", "INSERT INTO metrics (name, g_type, g_value, delta)"+
+		"VALUES ($1, $2, $3, $4)")
 	if err != nil {
 		return fmt.Errorf("failed to init statement: %w", err)
 	}
 
-	updStmt, err := tx.PrepareContext(ctx, "INSERT INTO metrics(name, g_type, g_value, delta) VALUES($1, $2, $3, $4)"+
+	_, err = tx.Prepare(ctx, "updStmt", "INSERT INTO metrics(name, g_type, g_value, delta) VALUES($1, $2, $3, $4)"+
 		" ON CONFLICT(name) DO UPDATE SET delta = metrics.delta + EXCLUDED.delta")
-	defer func() {
-		err = updStmt.Close()
-	}()
 	if err != nil {
 		return fmt.Errorf("failed to init update statement: %w", err)
 	}
@@ -95,27 +85,27 @@ func (s *PgStorage) SaveMetrics(ctx context.Context, metrics []*models.Metrics) 
 		}
 		switch v.MType {
 		case handlers.Counter:
-			_, err := updStmt.ExecContext(ctx, v.ID, v.MType, defaultValue, defaultDelta)
+			_, err := tx.Exec(ctx, "updStmt", v.ID, v.MType, defaultValue, defaultDelta)
 			if err != nil {
-				err := tx.Rollback()
+				err := tx.Rollback(ctx)
 				return fmt.Errorf("failed to execute insert statement: %w", err)
 			}
 		case handlers.Gauge:
-			_, err := deleteStmt.ExecContext(ctx, v.ID)
+			_, err := tx.Exec(ctx, "delete", v.ID)
 			if err != nil {
-				err := tx.Rollback()
+				err := tx.Rollback(ctx)
 				return fmt.Errorf("failed to execute delete statement: %w", err)
 			}
 
-			_, err = insrtStmt.ExecContext(ctx, v.ID, v.MType, defaultValue, defaultDelta)
+			_, err = tx.Exec(ctx, "insrtStmt", v.ID, v.MType, defaultValue, defaultDelta)
 			if err != nil {
-				err := tx.Rollback()
+				err := tx.Rollback(ctx)
 				return fmt.Errorf("failed to execute insert statement: %w", err)
 			}
 		}
 	}
 
-	err = tx.Commit()
+	err = tx.Commit(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to commit transaction: %w", err)
 	}
@@ -124,24 +114,8 @@ func (s *PgStorage) SaveMetrics(ctx context.Context, metrics []*models.Metrics) 
 }
 
 func (s *PgStorage) SaveGauge(ctx context.Context, name string, value float64) (err error) {
-	err = pingWithTimeout(s.db)
-	if err != nil {
-		return fmt.Errorf("%w", err)
-	}
-
-	stmt, err := s.db.Prepare("INSERT INTO metrics(name, g_type, g_value, delta) VALUES($1, $2, $3, $4)")
-	defer func() {
-		err = stmt.Close()
-		if err != nil {
-			err = fmt.Errorf("%s: %w", stmtErrMsg, err)
-		}
-	}()
-
-	if err != nil {
-		return fmt.Errorf("failed to prepareContext: %w", err)
-	}
-
-	_, err = stmt.ExecContext(ctx, name, handlers.Gauge, value, 0)
+	_, err = s.conn.Exec(ctx, "INSERT INTO metrics(name, g_type, g_value, delta) VALUES($1, $2, $3, $4)",
+		name, handlers.Gauge, value, 0)
 	if err != nil {
 		return fmt.Errorf("failed to execute save querry: %w", err)
 	}
@@ -149,25 +123,9 @@ func (s *PgStorage) SaveGauge(ctx context.Context, name string, value float64) (
 }
 
 func (s *PgStorage) SaveCount(ctx context.Context, name string, value int64) (err error) {
-	err = pingWithTimeout(s.db)
-	if err != nil {
-		return fmt.Errorf("%w", err)
-	}
-
-	stmt, err := s.db.PrepareContext(ctx, "INSERT INTO metrics(name, g_type, g_value, delta) VALUES($1, $2, $3, $4)"+
-		" ON CONFLICT(name) DO UPDATE SET delta = metrics.delta + EXCLUDED.delta")
-	defer func() {
-		err = stmt.Close()
-		if err != nil {
-			err = fmt.Errorf("%s: %w", stmtErrMsg, err)
-		}
-	}()
-
-	if err != nil {
-		return fmt.Errorf("failed to prepareContext: %w", err)
-	}
-
-	_, err = stmt.ExecContext(ctx, name, handlers.Counter, 0, value)
+	_, err = s.conn.Exec(ctx, "insrtCounter", "INSERT INTO metrics(name, g_type, g_value, delta)"+
+		"VALUES($1, $2, $3, $4) ON CONFLICT(name) DO UPDATE SET delta = metrics.delta + EXCLUDED.delta",
+		name, handlers.Counter, 0, value)
 	if err != nil {
 		return fmt.Errorf("failed to execute save querry: %w", err)
 	}
@@ -175,30 +133,7 @@ func (s *PgStorage) SaveCount(ctx context.Context, name string, value int64) (er
 }
 
 func (s *PgStorage) Gauges(ctx context.Context) (gauges []models.Gauge, err error) {
-	err = pingWithTimeout(s.db)
-	if err != nil {
-		return nil, fmt.Errorf("%w", err)
-	}
-
-	stmt, err := s.db.Prepare("SELECT name, g_value FROM metrics")
-	if err != nil {
-		return nil, fmt.Errorf("failed to prepare gauges query: %w", err)
-	}
-	defer func() {
-		err = stmt.Close()
-		if err != nil {
-			err = fmt.Errorf("%s: %w", stmtErrMsg, err)
-		}
-	}()
-
-	rows, err := stmt.QueryContext(ctx)
-	defer func() {
-		err = rows.Close()
-		if err != nil {
-			err = fmt.Errorf("failed to close row: %w", err)
-		}
-	}()
-
+	rows, err := s.conn.Query(ctx, "SELECT name, g_value FROM metrics")
 	if err != nil {
 		return nil, fmt.Errorf("failed to query gauges: %w", err)
 	}
@@ -220,28 +155,7 @@ func (s *PgStorage) Gauges(ctx context.Context) (gauges []models.Gauge, err erro
 }
 
 func (s *PgStorage) Counters(ctx context.Context) (counters []models.Counter, err error) {
-	err = pingWithTimeout(s.db)
-	if err != nil {
-		return nil, fmt.Errorf("%w", err)
-	}
-	stmt, err := s.db.Prepare("SELECT name, delta FROM metrics")
-	if err != nil {
-		return nil, fmt.Errorf("failed to prepare counters query: %w", err)
-	}
-	defer func() {
-		err = stmt.Close()
-		if err != nil {
-			err = fmt.Errorf("failed to close stmt: %w", err)
-		}
-	}()
-
-	rows, err := stmt.QueryContext(ctx)
-	defer func() {
-		err = rows.Close()
-		if err != nil {
-			err = fmt.Errorf("failed to close row: %w", err)
-		}
-	}()
+	rows, err := s.conn.Query(ctx, "SELECT name, delta FROM metrics")
 
 	if err != nil {
 		return nil, fmt.Errorf("failed to query gauges: %w", err)
@@ -264,50 +178,24 @@ func (s *PgStorage) Counters(ctx context.Context) (counters []models.Counter, er
 }
 
 func (s *PgStorage) Gauge(ctx context.Context, name string) (gauge models.Gauge, err error) {
-	err = pingWithTimeout(s.db)
-	if err != nil {
-		return models.Gauge{}, fmt.Errorf("%w", err)
-	}
-
-	stmt, err := s.db.Prepare("SELECT name, g_value FROM metrics WHERE name = $1")
-	if err != nil {
-		return models.Gauge{}, fmt.Errorf("failed to prepare counter query: %w", err)
-	}
-	defer func() {
-		err = stmt.Close()
-		if err != nil {
-			err = fmt.Errorf("failed to close stmt: %w", err)
-		}
-	}()
-
-	row := stmt.QueryRowContext(ctx, name)
+	row := s.conn.QueryRow(ctx, "SELECT name, g_value FROM metrics WHERE name = $1", name)
 	err = row.Scan(&gauge.Name, &gauge.Value)
 	if err != nil {
-		return models.Gauge{}, fmt.Errorf("failed to scan counter: %w", err)
+		if errors.Is(err, pgx.ErrNoRows) {
+			return models.Gauge{}, serrors.ErrNotFound
+		}
+		return models.Gauge{}, fmt.Errorf("failed to scan gauge: %w", err)
 	}
 	return gauge, nil
 }
 
 func (s *PgStorage) Counter(ctx context.Context, name string) (counter models.Counter, err error) {
-	err = pingWithTimeout(s.db)
-	if err != nil {
-		return models.Counter{}, fmt.Errorf("%w", err)
-	}
-
-	stmt, err := s.db.Prepare("SELECT name, delta FROM metrics WHERE name = $1")
-	if err != nil {
-		return models.Counter{}, fmt.Errorf("failed to prepare counter query: %w", err)
-	}
-	defer func() {
-		err = stmt.Close()
-		if err != nil {
-			err = fmt.Errorf("failed to close stmt: %w", err)
-		}
-	}()
-
-	row := stmt.QueryRowContext(ctx, name)
+	row := s.conn.QueryRow(ctx, "SELECT name, delta FROM metrics WHERE name = $1", name)
 	err = row.Scan(&counter.Name, &counter.Value)
 	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return models.Counter{}, serrors.ErrNotFound
+		}
 		return models.Counter{}, fmt.Errorf("failed to scan counter: %w", err)
 	}
 	return counter, nil
@@ -370,7 +258,7 @@ func createSchema(ctx context.Context, db *sql.DB) error {
 			g_type 	VARCHAR(200) NOT NULL,
 			g_value DOUBLE PRECISION NOT NULL,
 			delta 	bigint NOT NULL,
-			UNIQUE(name)
+			UNIQUE(name, g_type)
 		)`,
 	}
 
