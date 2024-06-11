@@ -9,6 +9,7 @@ import (
 	"github.com/VanGoghDev/practicum-metrics/internal/agent/config"
 	"github.com/VanGoghDev/practicum-metrics/internal/agent/services/metrics"
 	"github.com/VanGoghDev/practicum-metrics/internal/agent/services/sender"
+	"github.com/VanGoghDev/practicum-metrics/internal/agent/transport"
 	"github.com/VanGoghDev/practicum-metrics/internal/domain/models"
 	"go.uber.org/zap"
 )
@@ -33,7 +34,15 @@ type App struct {
 
 func New(log *zap.Logger, cfg *config.Config) *App {
 	metricsService := metrics.New(log)
-	sndr := sender.New(log, metricsService, &http.Client{}, cfg.Address)
+	sndr := sender.New(
+		log,
+		metricsService,
+		&http.Client{
+			Transport: &transport.CompressionTripper{
+				Proxied: http.DefaultTransport,
+			},
+		},
+		cfg.Address)
 
 	return &App{
 		Log:             log,

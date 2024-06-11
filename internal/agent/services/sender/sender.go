@@ -2,7 +2,6 @@ package sender
 
 import (
 	"bytes"
-	"compress/gzip"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -42,29 +41,12 @@ func (s *ServerConsumer) SendMetrics(metrics []*models.Metrics) error {
 		return fmt.Errorf("failed to serialize gauge: %w", err)
 	}
 
-	buf := bytes.NewBuffer(nil)
-	zb := gzip.NewWriter(buf)
-	_, err = zb.Write(mJ)
-	if err != nil {
-		return fmt.Errorf("failed to write gzip: %w", err)
-	}
-
-	err = zb.Flush()
-	if err != nil {
-		return fmt.Errorf("failed to flush gzip: %w", err)
-	}
-
-	err = zb.Close()
-	if err != nil {
-		return fmt.Errorf("failed to close gzip: %w", err)
-	}
+	buf := bytes.NewBuffer(mJ)
 
 	request, err := http.NewRequest(
 		http.MethodPost,
 		fmt.Sprintf("http://%s/updates/", s.url),
 		buf)
-	request.Header.Set("Content-Encoding", "gzip")
-	request.Header.Set("Accept-Encoding", "gzip")
 	if err != nil {
 		return fmt.Errorf("failed to create request for gauge update %w", err)
 	}
