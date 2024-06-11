@@ -1,7 +1,6 @@
 package metrics
 
 import (
-	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -27,18 +26,18 @@ const (
 	notFoundErrMsg = "Not found"
 )
 
-func MetricsHandler(ctx context.Context, zlog *zap.SugaredLogger, s routers.Storage) http.HandlerFunc {
+func MetricsHandler(zlog *zap.SugaredLogger, s routers.Storage) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 
-		gauges, err := s.Gauges(ctx)
+		gauges, err := s.Gauges(r.Context())
 		if err != nil {
 			zlog.Warnf("failed to fetch gauges: %v", err)
 			http.Error(w, internalErrMsg, http.StatusInternalServerError)
 			return
 		}
 
-		counters, err := s.Counters(ctx)
+		counters, err := s.Counters(r.Context())
 		if err != nil {
 			zlog.Warnf("failed to fetch counters: %v", err)
 			http.Error(w, internalErrMsg, http.StatusInternalServerError)
@@ -79,7 +78,7 @@ func MetricsHandler(ctx context.Context, zlog *zap.SugaredLogger, s routers.Stor
 	}
 }
 
-func MetricHandler(ctx context.Context, zlog *zap.SugaredLogger, s routers.Storage) http.HandlerFunc {
+func MetricHandler(zlog *zap.SugaredLogger, s routers.Storage) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		var req models.Metrics
@@ -103,7 +102,7 @@ func MetricHandler(ctx context.Context, zlog *zap.SugaredLogger, s routers.Stora
 		switch req.MType {
 		case handlers.Counter:
 			{
-				counter, err := s.Counter(ctx, req.ID)
+				counter, err := s.Counter(r.Context(), req.ID)
 				if err != nil {
 					handleError(zlog, err, w)
 					return
@@ -123,7 +122,7 @@ func MetricHandler(ctx context.Context, zlog *zap.SugaredLogger, s routers.Stora
 			}
 		case handlers.Gauge:
 			{
-				gauge, err := s.Gauge(ctx, req.ID)
+				gauge, err := s.Gauge(r.Context(), req.ID)
 				if err != nil {
 					handleError(zlog, err, w)
 					return
@@ -146,7 +145,7 @@ func MetricHandler(ctx context.Context, zlog *zap.SugaredLogger, s routers.Stora
 	}
 }
 
-func MetricHandlerRouterParams(ctx context.Context, zlog *zap.SugaredLogger, s routers.Storage) http.HandlerFunc {
+func MetricHandlerRouterParams(zlog *zap.SugaredLogger, s routers.Storage) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 
@@ -167,7 +166,7 @@ func MetricHandlerRouterParams(ctx context.Context, zlog *zap.SugaredLogger, s r
 		switch mType {
 		case handlers.Counter:
 			{
-				counter, err := s.Counter(ctx, mName)
+				counter, err := s.Counter(r.Context(), mName)
 				if err != nil {
 					if errors.Is(err, serrors.ErrNotFound) {
 						http.Error(w, "Not found", http.StatusNotFound)
@@ -195,7 +194,7 @@ func MetricHandlerRouterParams(ctx context.Context, zlog *zap.SugaredLogger, s r
 			}
 		case handlers.Gauge:
 			{
-				gauge, err := s.Gauge(ctx, mName)
+				gauge, err := s.Gauge(r.Context(), mName)
 				if err != nil {
 					if errors.Is(err, serrors.ErrNotFound) {
 						http.Error(w, "Not found", http.StatusNotFound)

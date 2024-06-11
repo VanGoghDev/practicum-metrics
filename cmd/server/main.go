@@ -44,7 +44,7 @@ func run(ctx context.Context) error {
 	}
 
 	// router
-	router := chirouter.BuildRouter(ctx, s, zlog, cfg)
+	router := chirouter.BuildRouter(s, zlog, cfg)
 
 	err = http.ListenAndServe(cfg.Address, router)
 	if err != nil {

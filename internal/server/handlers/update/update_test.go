@@ -3,7 +3,6 @@ package update_test
 import (
 	"bytes"
 	"compress/gzip"
-	"context"
 	"fmt"
 	"io"
 	"net/http"
@@ -106,7 +105,7 @@ func TestUpdateHandler(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			log, _ := logger.New("Info")
 			s, _ := memstorage.New(log)
-			r := chirouter.BuildRouter(context.Background(), s, log, nil)
+			r := chirouter.BuildRouter(s, log, nil)
 			srv := httptest.NewServer(r)
 			defer srv.Close()
 
@@ -130,7 +129,7 @@ func TestGzipCompression(t *testing.T) {
 	s.GaugesM = map[string]float64{
 		"Alloc": 2.0,
 	}
-	r := chirouter.BuildRouter(context.Background(), s, log, nil)
+	r := chirouter.BuildRouter(s, log, nil)
 	srv := httptest.NewServer(r)
 	defer srv.Close()
 

@@ -59,7 +59,7 @@ func (s *PgStorage) SaveMetrics(ctx context.Context, metrics []*models.Metrics) 
 		return fmt.Errorf("failed to begin db transaction: %w", err)
 	}
 
-	deleteStmt, err := tx.PrepareContext(ctx, "DELETE FROM gauges WHERE name = $1")
+	deleteStmt, err := tx.PrepareContext(ctx, "DELETE FROM metrics WHERE name = $1")
 	defer func() {
 		err = deleteStmt.Close()
 	}()
@@ -67,7 +67,7 @@ func (s *PgStorage) SaveMetrics(ctx context.Context, metrics []*models.Metrics) 
 		return fmt.Errorf("failed to init delete statement: %w", err)
 	}
 
-	insrtStmt, err := tx.PrepareContext(ctx, "INSERT INTO gauges (name, g_type, g_value, delta) VALUES ($1, $2, $3, $4)")
+	insrtStmt, err := tx.PrepareContext(ctx, "INSERT INTO metrics (name, g_type, g_value, delta) VALUES ($1, $2, $3, $4)")
 	defer func() {
 		err = insrtStmt.Close()
 	}()
@@ -75,8 +75,8 @@ func (s *PgStorage) SaveMetrics(ctx context.Context, metrics []*models.Metrics) 
 		return fmt.Errorf("failed to init statement: %w", err)
 	}
 
-	updStmt, err := tx.PrepareContext(ctx, "INSERT INTO gauges(name, g_type, g_value, delta) VALUES($1, $2, $3, $4)"+
-		" ON CONFLICT(name) DO UPDATE SET delta = gauges.delta + EXCLUDED.delta")
+	updStmt, err := tx.PrepareContext(ctx, "INSERT INTO metrics(name, g_type, g_value, delta) VALUES($1, $2, $3, $4)"+
+		" ON CONFLICT(name) DO UPDATE SET delta = metrics.delta + EXCLUDED.delta")
 	defer func() {
 		err = updStmt.Close()
 	}()
@@ -129,7 +129,7 @@ func (s *PgStorage) SaveGauge(ctx context.Context, name string, value float64) (
 		return fmt.Errorf("%w", err)
 	}
 
-	stmt, err := s.db.Prepare("INSERT INTO gauges(name, g_type, g_value, delta) VALUES($1, $2, $3, $4)")
+	stmt, err := s.db.Prepare("INSERT INTO metrics(name, g_type, g_value, delta) VALUES($1, $2, $3, $4)")
 	defer func() {
 		err = stmt.Close()
 		if err != nil {
@@ -154,8 +154,8 @@ func (s *PgStorage) SaveCount(ctx context.Context, name string, value int64) (er
 		return fmt.Errorf("%w", err)
 	}
 
-	stmt, err := s.db.PrepareContext(ctx, "INSERT INTO gauges(name, g_type, g_value, delta) VALUES($1, $2, $3, $4)"+
-		" ON CONFLICT(name) DO UPDATE SET delta = gauges.delta + EXCLUDED.delta")
+	stmt, err := s.db.PrepareContext(ctx, "INSERT INTO metrics(name, g_type, g_value, delta) VALUES($1, $2, $3, $4)"+
+		" ON CONFLICT(name) DO UPDATE SET delta = metrics.delta + EXCLUDED.delta")
 	defer func() {
 		err = stmt.Close()
 		if err != nil {
@@ -180,7 +180,7 @@ func (s *PgStorage) Gauges(ctx context.Context) (gauges []models.Gauge, err erro
 		return nil, fmt.Errorf("%w", err)
 	}
 
-	stmt, err := s.db.Prepare("SELECT name, g_value FROM gauges")
+	stmt, err := s.db.Prepare("SELECT name, g_value FROM metrics")
 	if err != nil {
 		return nil, fmt.Errorf("failed to prepare gauges query: %w", err)
 	}
@@ -200,7 +200,7 @@ func (s *PgStorage) Gauges(ctx context.Context) (gauges []models.Gauge, err erro
 	}()
 
 	if err != nil {
-		return nil, fmt.Errorf("faile to query gauges: %w", err)
+		return nil, fmt.Errorf("failed to query gauges: %w", err)
 	}
 
 	for rows.Next() {
@@ -224,7 +224,7 @@ func (s *PgStorage) Counters(ctx context.Context) (counters []models.Counter, er
 	if err != nil {
 		return nil, fmt.Errorf("%w", err)
 	}
-	stmt, err := s.db.Prepare("SELECT name, delta FROM gauges")
+	stmt, err := s.db.Prepare("SELECT name, delta FROM metrics")
 	if err != nil {
 		return nil, fmt.Errorf("failed to prepare counters query: %w", err)
 	}
@@ -244,7 +244,7 @@ func (s *PgStorage) Counters(ctx context.Context) (counters []models.Counter, er
 	}()
 
 	if err != nil {
-		return nil, fmt.Errorf("faile to query gauges: %w", err)
+		return nil, fmt.Errorf("failed to query gauges: %w", err)
 	}
 
 	for rows.Next() {
@@ -269,7 +269,7 @@ func (s *PgStorage) Gauge(ctx context.Context, name string) (gauge models.Gauge,
 		return models.Gauge{}, fmt.Errorf("%w", err)
 	}
 
-	stmt, err := s.db.Prepare("SELECT name, g_value FROM gauges WHERE name = $1")
+	stmt, err := s.db.Prepare("SELECT name, g_value FROM metrics WHERE name = $1")
 	if err != nil {
 		return models.Gauge{}, fmt.Errorf("failed to prepare counter query: %w", err)
 	}
@@ -294,7 +294,7 @@ func (s *PgStorage) Counter(ctx context.Context, name string) (counter models.Co
 		return models.Counter{}, fmt.Errorf("%w", err)
 	}
 
-	stmt, err := s.db.Prepare("SELECT name, delta FROM gauges WHERE name = $1")
+	stmt, err := s.db.Prepare("SELECT name, delta FROM metrics WHERE name = $1")
 	if err != nil {
 		return models.Counter{}, fmt.Errorf("failed to prepare counter query: %w", err)
 	}
@@ -365,11 +365,12 @@ func createSchema(ctx context.Context, db *sql.DB) error {
 	}()
 
 	createSchemaStmts := []string{
-		`CREATE TABLE IF NOT EXISTS gauges(
+		`CREATE TABLE IF NOT EXISTS metrics(
 			name 	VARCHAR(200) PRIMARY KEY,
 			g_type 	VARCHAR(200) NOT NULL,
 			g_value DOUBLE PRECISION NOT NULL,
-			delta 	bigint NOT NULL
+			delta 	bigint NOT NULL,
+			UNIQUE(name)
 		)`,
 	}
 

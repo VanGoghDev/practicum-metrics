@@ -1,7 +1,6 @@
 package update
 
 import (
-	"context"
 	"encoding/json"
 	"net/http"
 
@@ -10,7 +9,7 @@ import (
 	"go.uber.org/zap"
 )
 
-func UpdatesHandler(ctx context.Context, zlog *zap.SugaredLogger, storage routers.Storage) http.HandlerFunc {
+func UpdatesHandler(zlog *zap.SugaredLogger, storage routers.Storage) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		metrics := []*models.Metrics{}
@@ -20,7 +19,7 @@ func UpdatesHandler(ctx context.Context, zlog *zap.SugaredLogger, storage router
 			http.Error(w, "Internal error", http.StatusInternalServerError)
 			return
 		}
-		err := storage.SaveMetrics(ctx, metrics)
+		err := storage.SaveMetrics(r.Context(), metrics)
 		if err != nil {
 			zlog.Warnf("failed to save metrics: %v", err)
 			http.Error(w, "Internal error", http.StatusInternalServerError)
