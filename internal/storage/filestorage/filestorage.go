@@ -172,6 +172,10 @@ func (f *FileStorage) restore(ctx context.Context) error {
 	return nil
 }
 
+func (f *FileStorage) Ping(ctx context.Context) error {
+	return nil
+}
+
 func (f *FileStorage) Close(ctx context.Context) error {
 	if err := f.file.Close(); err != nil {
 		return fmt.Errorf("Filestorage.Close: %w", err)

@@ -20,6 +20,7 @@ type Storage interface {
 	Counters(ctx context.Context) (counters []models.Counter, err error)
 	Gauge(ctx context.Context, name string) (gauge models.Gauge, err error)
 	Counter(ctx context.Context, name string) (counter models.Counter, err error)
+	Ping(ctx context.Context) error
 	Close(ctx context.Context) error
 }
 

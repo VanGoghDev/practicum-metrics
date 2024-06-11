@@ -37,7 +37,7 @@ func BuildRouter(s routers.Storage, log *zap.Logger, cfg *config.Config) chi.Rou
 	})
 
 	r.Route("/ping", func(r chi.Router) {
-		r.Get("/", ping.PingHandler(sugarlog, cfg))
+		r.Get("/", ping.PingHandler(sugarlog, cfg, s))
 	})
 
 	return r

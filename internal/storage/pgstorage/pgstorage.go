@@ -2,7 +2,6 @@ package pgstorage
 
 import (
 	"context"
-	"database/sql"
 	"errors"
 	"fmt"
 	"log"
@@ -20,39 +19,32 @@ import (
 )
 
 type PgStorage struct {
-	conn *pgxpool.Pool
-	db   *sql.DB
+	pool *pgxpool.Pool
 }
 
 func New(ctx context.Context, zlog *zap.SugaredLogger, cfg *config.Config) (*PgStorage, error) {
-	conn, err := pgxpool.New(ctx, cfg.DBConnectionString)
+	pool, err := pgxpool.New(ctx, cfg.DBConnectionString)
 	if err != nil {
 		zlog.Warnf("failed to establich connection with db: %w:", err)
 	}
 
-	db, err := sql.Open("pgx", cfg.DBConnectionString)
-	if err != nil {
-		zlog.Warnf("failed to open db: %v", err)
-		return nil, fmt.Errorf("failed to open db: %w", err)
-	}
-	err = pingWithTimeout(db)
+	err = pingWithTimeout(ctx, pool)
 	if err != nil {
 		return nil, fmt.Errorf("%w", err)
 	}
-	err = createSchema(ctx, db)
+	err = createSchema(ctx, pool)
 	if err != nil {
 		zlog.Warnf("failed to create schema: %w", err)
 		return nil, fmt.Errorf("failed to create schema: %w", err)
 	}
 
 	return &PgStorage{
-		conn: conn,
-		db:   db,
+		pool: pool,
 	}, nil
 }
 
 func (s *PgStorage) SaveMetrics(ctx context.Context, metrics []*models.Metrics) (err error) {
-	tx, err := s.conn.BeginTx(ctx, pgx.TxOptions{})
+	tx, err := s.pool.BeginTx(ctx, pgx.TxOptions{})
 	if err != nil {
 		return fmt.Errorf("failed to begin db transaction: %w", err)
 	}
@@ -114,7 +106,7 @@ func (s *PgStorage) SaveMetrics(ctx context.Context, metrics []*models.Metrics) 
 }
 
 func (s *PgStorage) SaveGauge(ctx context.Context, name string, value float64) (err error) {
-	_, err = s.conn.Exec(ctx, "INSERT INTO metrics(name, g_type, g_value, delta) VALUES($1, $2, $3, $4)",
+	_, err = s.pool.Exec(ctx, "INSERT INTO metrics(name, g_type, g_value, delta) VALUES($1, $2, $3, $4)",
 		name, handlers.Gauge, value, 0)
 	if err != nil {
 		return fmt.Errorf("failed to execute save querry: %w", err)
@@ -123,7 +115,7 @@ func (s *PgStorage) SaveGauge(ctx context.Context, name string, value float64) (
 }
 
 func (s *PgStorage) SaveCount(ctx context.Context, name string, value int64) (err error) {
-	_, err = s.conn.Exec(ctx, "insrtCounter", "INSERT INTO metrics(name, g_type, g_value, delta)"+
+	_, err = s.pool.Exec(ctx, "INSERT INTO metrics(name, g_type, g_value, delta)"+
 		"VALUES($1, $2, $3, $4) ON CONFLICT(name) DO UPDATE SET delta = metrics.delta + EXCLUDED.delta",
 		name, handlers.Counter, 0, value)
 	if err != nil {
@@ -133,7 +125,7 @@ func (s *PgStorage) SaveCount(ctx context.Context, name string, value int64) (er
 }
 
 func (s *PgStorage) Gauges(ctx context.Context) (gauges []models.Gauge, err error) {
-	rows, err := s.conn.Query(ctx, "SELECT name, g_value FROM metrics")
+	rows, err := s.pool.Query(ctx, "SELECT name, g_value FROM metrics")
 	if err != nil {
 		return nil, fmt.Errorf("failed to query gauges: %w", err)
 	}
@@ -155,7 +147,7 @@ func (s *PgStorage) Gauges(ctx context.Context) (gauges []models.Gauge, err erro
 }
 
 func (s *PgStorage) Counters(ctx context.Context) (counters []models.Counter, err error) {
-	rows, err := s.conn.Query(ctx, "SELECT name, delta FROM metrics")
+	rows, err := s.pool.Query(ctx, "SELECT name, delta FROM metrics")
 
 	if err != nil {
 		return nil, fmt.Errorf("failed to query gauges: %w", err)
@@ -178,7 +170,7 @@ func (s *PgStorage) Counters(ctx context.Context) (counters []models.Counter, er
 }
 
 func (s *PgStorage) Gauge(ctx context.Context, name string) (gauge models.Gauge, err error) {
-	row := s.conn.QueryRow(ctx, "SELECT name, g_value FROM metrics WHERE name = $1", name)
+	row := s.pool.QueryRow(ctx, "SELECT name, g_value FROM metrics WHERE name = $1", name)
 	err = row.Scan(&gauge.Name, &gauge.Value)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -190,7 +182,7 @@ func (s *PgStorage) Gauge(ctx context.Context, name string) (gauge models.Gauge,
 }
 
 func (s *PgStorage) Counter(ctx context.Context, name string) (counter models.Counter, err error) {
-	row := s.conn.QueryRow(ctx, "SELECT name, delta FROM metrics WHERE name = $1", name)
+	row := s.pool.QueryRow(ctx, "SELECT name, delta FROM metrics WHERE name = $1", name)
 	err = row.Scan(&counter.Name, &counter.Value)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -201,12 +193,25 @@ func (s *PgStorage) Counter(ctx context.Context, name string) (counter models.Co
 	return counter, nil
 }
 
+func (s *PgStorage) Ping(ctx context.Context) error {
+	err := s.pool.Ping(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to ping db: %w", err)
+	}
+	return nil
+}
+
+func (s *PgStorage) Close(ctx context.Context) error {
+	s.pool.Close()
+	return nil
+}
+
 // Пингует базу. Если что-то не так, то будет пинговать три раза, затем вернет ошибку если недопингуется.
-func pingWithTimeout(db *sql.DB) error {
+func pingWithTimeout(ctx context.Context, db *pgxpool.Pool) error {
 	retriesCount := 0
 	maxRetriesCount := 3
 	f := 2
-	err := db.Ping()
+	err := db.Ping(ctx)
 	if err == nil {
 		return nil
 	}
@@ -216,7 +221,7 @@ func pingWithTimeout(db *sql.DB) error {
 			break
 		}
 		retriesCount++
-		err = db.Ping()
+		err = db.Ping(ctx)
 		if err == nil {
 			break
 		}
@@ -230,25 +235,14 @@ func pingWithTimeout(db *sql.DB) error {
 	return nil
 }
 
-func (s *PgStorage) Close(ctx context.Context) error {
-	err := s.db.Close()
-	if err != nil {
-		return fmt.Errorf("failed to close db: %w", err)
-	}
-
-	return nil
-}
-
-func createSchema(ctx context.Context, db *sql.DB) error {
-	tx, err := db.BeginTx(ctx, nil)
+func createSchema(ctx context.Context, db *pgxpool.Pool) error {
+	tx, err := db.BeginTx(ctx, pgx.TxOptions{})
 	if err != nil {
 		err = fmt.Errorf("failed to start a transaction: %w", err)
 	}
 	defer func() {
-		if err := tx.Rollback(); err != nil {
-			if !errors.Is(err, sql.ErrTxDone) {
-				log.Printf("failed to rollback the transaction: %v", err)
-			}
+		if err := tx.Rollback(ctx); err != nil {
+			log.Printf("failed to rollback the transaction: %v", err)
 		}
 	}()
 
@@ -263,12 +257,12 @@ func createSchema(ctx context.Context, db *sql.DB) error {
 	}
 
 	for _, stmt := range createSchemaStmts {
-		if _, err := tx.ExecContext(ctx, stmt); err != nil {
+		if _, err := tx.Exec(ctx, stmt); err != nil {
 			return fmt.Errorf("failed to execute statement `%s`: %w", stmt, err)
 		}
 	}
 
-	if err := tx.Commit(); err != nil {
+	if err := tx.Commit(ctx); err != nil {
 		return fmt.Errorf("failed to commit the transaction: %w", err)
 	}
 	return err

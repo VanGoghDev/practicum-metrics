@@ -150,6 +150,10 @@ func (s *MemStorage) SaveMetrics(ctx context.Context, metrics []*models.Metrics)
 	return nil
 }
 
+func (s *MemStorage) Ping(ctx context.Context) error {
+	return nil
+}
+
 func (s *MemStorage) Close(ctx context.Context) error {
 	return nil
 }
