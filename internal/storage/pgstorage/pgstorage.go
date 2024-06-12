@@ -13,7 +13,6 @@ import (
 	"github.com/VanGoghDev/practicum-metrics/internal/storage/serrors"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
-	_ "github.com/jackc/pgx/v5/stdlib"
 
 	"go.uber.org/zap"
 )
@@ -28,23 +27,29 @@ func New(ctx context.Context, zlog *zap.SugaredLogger, cfg *config.Config) (*PgS
 		zlog.Warnf("failed to establich connection with db: %w:", err)
 	}
 
-	err = pingWithTimeout(ctx, pool)
-	if err != nil {
-		return nil, fmt.Errorf("%w", err)
-	}
 	err = createSchema(ctx, pool)
 	if err != nil {
 		zlog.Warnf("failed to create schema: %w", err)
 		return nil, fmt.Errorf("failed to create schema: %w", err)
 	}
-
-	return &PgStorage{
+	s := &PgStorage{
 		pool: pool,
-	}, nil
+	}
+
+	err = s.pingWithTimeout(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("%w", err)
+	}
+	return s, nil
 }
 
 func (s *PgStorage) SaveMetrics(ctx context.Context, metrics []*models.Metrics) (err error) {
 	tx, err := s.pool.BeginTx(ctx, pgx.TxOptions{})
+	defer func() {
+		if err := tx.Rollback(ctx); err != nil {
+			log.Printf("failed to rollback the transaction: %v", err)
+		}
+	}()
 	if err != nil {
 		return fmt.Errorf("failed to begin db transaction: %w", err)
 	}
@@ -79,19 +84,16 @@ func (s *PgStorage) SaveMetrics(ctx context.Context, metrics []*models.Metrics) 
 		case handlers.Counter:
 			_, err := tx.Exec(ctx, "updStmt", v.ID, v.MType, defaultValue, defaultDelta)
 			if err != nil {
-				err := tx.Rollback(ctx)
 				return fmt.Errorf("failed to execute insert statement: %w", err)
 			}
 		case handlers.Gauge:
 			_, err := tx.Exec(ctx, "delete", v.ID)
 			if err != nil {
-				err := tx.Rollback(ctx)
 				return fmt.Errorf("failed to execute delete statement: %w", err)
 			}
 
 			_, err = tx.Exec(ctx, "insrtStmt", v.ID, v.MType, defaultValue, defaultDelta)
 			if err != nil {
-				err := tx.Rollback(ctx)
 				return fmt.Errorf("failed to execute insert statement: %w", err)
 			}
 		}
@@ -207,11 +209,11 @@ func (s *PgStorage) Close(ctx context.Context) error {
 }
 
 // Пингует базу. Если что-то не так, то будет пинговать три раза, затем вернет ошибку если недопингуется.
-func pingWithTimeout(ctx context.Context, db *pgxpool.Pool) error {
+func (s *PgStorage) pingWithTimeout(ctx context.Context) error {
 	retriesCount := 0
 	maxRetriesCount := 3
 	f := 2
-	err := db.Ping(ctx)
+	err := s.pool.Ping(ctx)
 	if err == nil {
 		return nil
 	}
@@ -221,7 +223,7 @@ func pingWithTimeout(ctx context.Context, db *pgxpool.Pool) error {
 			break
 		}
 		retriesCount++
-		err = db.Ping(ctx)
+		err = s.Ping(ctx)
 		if err == nil {
 			break
 		}

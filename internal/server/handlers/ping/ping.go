@@ -3,8 +3,6 @@ package ping
 import (
 	"net/http"
 
-	_ "github.com/jackc/pgx/v5/stdlib"
-
 	"github.com/VanGoghDev/practicum-metrics/internal/server/config"
 	"github.com/VanGoghDev/practicum-metrics/internal/server/routers"
 	"go.uber.org/zap"
