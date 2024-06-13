@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log"
 	"time"
 
 	"github.com/VanGoghDev/practicum-metrics/internal/domain/models"
@@ -18,6 +17,7 @@ import (
 )
 
 type PgStorage struct {
+	zlog *zap.SugaredLogger
 	pool *pgxpool.Pool
 }
 
@@ -27,18 +27,19 @@ func New(ctx context.Context, zlog *zap.SugaredLogger, cfg *config.Config) (*PgS
 		zlog.Warnf("failed to establich connection with db: %w:", err)
 	}
 
-	err = createSchema(ctx, pool)
+	err = createSchema(ctx, zlog, pool)
 	if err != nil {
 		zlog.Warnf("failed to create schema: %w", err)
 		return nil, fmt.Errorf("failed to create schema: %w", err)
 	}
 	s := &PgStorage{
+		zlog: zlog,
 		pool: pool,
 	}
 
 	err = s.pingWithTimeout(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("%w", err)
+		return nil, fmt.Errorf("failed to ping with timeout: %w", err)
 	}
 	return s, nil
 }
@@ -47,7 +48,7 @@ func (s *PgStorage) SaveMetrics(ctx context.Context, metrics []*models.Metrics) 
 	tx, err := s.pool.BeginTx(ctx, pgx.TxOptions{})
 	defer func() {
 		if err := tx.Rollback(ctx); err != nil {
-			log.Printf("failed to rollback the transaction: %v", err)
+			s.zlog.Errorf("failed to rollaback the transaction: %w", err)
 		}
 	}()
 	if err != nil {
@@ -237,14 +238,14 @@ func (s *PgStorage) pingWithTimeout(ctx context.Context) error {
 	return nil
 }
 
-func createSchema(ctx context.Context, db *pgxpool.Pool) error {
+func createSchema(ctx context.Context, zlog *zap.SugaredLogger, db *pgxpool.Pool) error {
 	tx, err := db.BeginTx(ctx, pgx.TxOptions{})
 	if err != nil {
 		err = fmt.Errorf("failed to start a transaction: %w", err)
 	}
 	defer func() {
 		if err := tx.Rollback(ctx); err != nil {
-			log.Printf("failed to rollback the transaction: %v", err)
+			zlog.Errorf("failed to rollback the transaction: %w", err)
 		}
 	}()
 

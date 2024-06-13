@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"log"
 	"net/http"
 
 	"github.com/VanGoghDev/practicum-metrics/internal/domain/models"
@@ -186,7 +185,6 @@ func MetricHandlerRouterParams(zlog *zap.SugaredLogger, s routers.Storage) http.
 				if err != nil {
 					zlog.Errorf("%v: %v", errFailedToFetchCounter, err)
 
-					log.Printf("%v: %v", errFailedToFetchCounter, err)
 					http.Error(w, internalErrMsg, http.StatusInternalServerError)
 					return
 				}
