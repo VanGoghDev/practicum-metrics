@@ -11,11 +11,12 @@ import (
 )
 
 type Config struct {
-	Address         string `env:"ADDRESS"`
-	Loglevel        string `env:"LOGLVL"`
-	FileStoragePath string `env:"FILE_STORAGE_PATH"`
-	Restore         bool   `env:"RESTORE"`
-	StoreInterval   time.Duration
+	Address            string `env:"ADDRESS"`
+	Loglevel           string `env:"LOGLVL"`
+	FileStoragePath    string `env:"FILE_STORAGE_PATH"`
+	DBConnectionString string `env:"DATABASE_DSN"`
+	Restore            bool   `env:"RESTORE"`
+	StoreInterval      time.Duration
 }
 
 const (
@@ -29,13 +30,14 @@ func Load() (config *Config, err error) {
 	}
 
 	var flagStoreInterval int64
-	var flagAddress, flagFileStoragePath, flagLoglevel string
+	var flagAddress, flagFileStoragePath, flagLoglevel, flagDBConnection string
 	var flagRestore bool
 	flag.StringVar(&flagAddress, "a", "localhost:8080", "address and port to run server")
 	flag.StringVar(&flagLoglevel, "lvl", "info", "log level")
 	flag.Int64Var(&flagStoreInterval, "i", defaultStoreInterval, "store interval in seconds")
 	flag.StringVar(&flagFileStoragePath,
 		"f", "/tmp/metrics-db.json", "path to file storage")
+	flag.StringVar(&flagDBConnection, "d", "", "db connection string")
 	flag.BoolVar(&flagRestore, "r", true, "restore previous state or not")
 	flag.Parse()
 
@@ -51,8 +53,11 @@ func Load() (config *Config, err error) {
 		cfg.FileStoragePath = flagFileStoragePath
 	}
 
-	_, present := os.LookupEnv("RESTORE")
-	if !present {
+	if _, present := os.LookupEnv("DATABASE_DSN"); !present {
+		cfg.DBConnectionString = flagDBConnection
+	}
+
+	if _, present := os.LookupEnv("RESTORE"); !present {
 		cfg.Restore = flagRestore
 	}
 
@@ -65,6 +70,5 @@ func Load() (config *Config, err error) {
 		}
 		cfg.StoreInterval = time.Duration(i) * time.Second
 	}
-
 	return &cfg, nil
 }

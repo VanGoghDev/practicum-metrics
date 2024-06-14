@@ -1,6 +1,7 @@
 package memstorage
 
 import (
+	"context"
 	"testing"
 
 	"github.com/VanGoghDev/practicum-metrics/internal/server/logger"
@@ -69,7 +70,7 @@ func TestGauge(t *testing.T) {
 			s, _ := New(zlog)
 			s.GaugesM = tt.fields.Gauges
 			s.CountersM = tt.fields.Counters
-			gauge, err := s.Gauge(tt.args.name)
+			gauge, err := s.Gauge(context.Background(), tt.args.name)
 			assert.Equal(t, tt.want.err, err)
 			assert.Equal(t, tt.want.metricValue, gauge.Value)
 		})
@@ -130,7 +131,7 @@ func TestCounter(t *testing.T) {
 				CountersM: tt.fields.Counters,
 				zlog:      log,
 			}
-			counter, err := s.Counter(tt.args.name)
+			counter, err := s.Counter(context.Background(), tt.args.name)
 			assert.Equal(t, tt.want.err, err)
 			assert.Equal(t, tt.want.metricValue, counter.Value)
 		})
@@ -206,7 +207,7 @@ func TestSaveCount(t *testing.T) {
 				CountersM: tt.fields.Counters,
 				zlog:      log,
 			}
-			err := s.SaveCount(tt.args.name, tt.args.value)
+			err := s.SaveCount(context.Background(), tt.args.name, tt.args.value)
 			assert.Equal(t, tt.want.err, err)
 			assert.Equal(t, tt.want.metricValue, s.CountersM[tt.args.name])
 		})
@@ -276,7 +277,7 @@ func runTest(t *testing.T, tt *test) func(name string, f func(t *testing.T)) boo
 			CountersM: tt.fields.Counters,
 			zlog:      log,
 		}
-		err := s.SaveGauge(tt.args.name, tt.args.value)
+		err := s.SaveGauge(context.Background(), tt.args.name, tt.args.value)
 		assert.Equal(t, tt.want.err, err)
 		return assert.Equal(t, tt.want.err, err) && assert.Equal(t, tt.want.metricValue, s.GaugesM[tt.args.name])
 	}

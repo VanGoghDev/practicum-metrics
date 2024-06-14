@@ -1,8 +1,7 @@
-package consumer
+package sender
 
 import (
 	"bytes"
-	"compress/gzip"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -37,37 +36,24 @@ func New(zlog *zap.Logger, metricsProvider MetricsProvider, client HTTPClient, u
 }
 
 func (s *ServerConsumer) SendMetrics(metrics []*models.Metrics) error {
-	for _, m := range metrics {
-		mJ, err := json.Marshal(m)
-		if err != nil {
-			return fmt.Errorf("failed to serialize gauge: %w", err)
-		}
+	mJ, err := json.Marshal(metrics)
+	if err != nil {
+		return fmt.Errorf("failed to serialize gauge: %w", err)
+	}
 
-		buf := bytes.NewBuffer(nil)
-		zb := gzip.NewWriter(buf)
-		_, err = zb.Write(mJ)
-		if err != nil {
-			return fmt.Errorf("failed to write gzip: %w", err)
-		}
-		err = zb.Close()
-		if err != nil {
-			return fmt.Errorf("failed to close gzip: %w", err)
-		}
+	buf := bytes.NewBuffer(mJ)
 
-		request, err := http.NewRequest(
-			http.MethodPost,
-			fmt.Sprintf("http://%s/update/", s.url),
-			buf)
-		request.Header.Set("Content-Encoding", "gzip")
-		request.Header.Set("Accept-Encoding", "gzip")
-		if err != nil {
-			return fmt.Errorf("failed to create request for gauge update %w", err)
-		}
+	request, err := http.NewRequest(
+		http.MethodPost,
+		fmt.Sprintf("http://%s/updates/", s.url),
+		buf)
+	if err != nil {
+		return fmt.Errorf("failed to create request for gauge update %w", err)
+	}
 
-		err = s.sendRequest(request)
-		if err != nil {
-			return fmt.Errorf("failed to send request for metric %s: %w", m.ID, err)
-		}
+	err = s.sendRequest(request)
+	if err != nil {
+		return fmt.Errorf("failed to send request: %w", err)
 	}
 	return nil
 }

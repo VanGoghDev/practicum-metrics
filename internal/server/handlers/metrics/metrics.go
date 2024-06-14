@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"log"
 	"net/http"
 
 	"github.com/VanGoghDev/practicum-metrics/internal/domain/models"
@@ -30,14 +29,14 @@ func MetricsHandler(zlog *zap.SugaredLogger, s routers.Storage) http.HandlerFunc
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 
-		gauges, err := s.Gauges()
+		gauges, err := s.Gauges(r.Context())
 		if err != nil {
 			zlog.Warnf("failed to fetch gauges: %v", err)
 			http.Error(w, internalErrMsg, http.StatusInternalServerError)
 			return
 		}
 
-		counters, err := s.Counters()
+		counters, err := s.Counters(r.Context())
 		if err != nil {
 			zlog.Warnf("failed to fetch counters: %v", err)
 			http.Error(w, internalErrMsg, http.StatusInternalServerError)
@@ -102,7 +101,7 @@ func MetricHandler(zlog *zap.SugaredLogger, s routers.Storage) http.HandlerFunc 
 		switch req.MType {
 		case handlers.Counter:
 			{
-				counter, err := s.Counter(req.ID)
+				counter, err := s.Counter(r.Context(), req.ID)
 				if err != nil {
 					handleError(zlog, err, w)
 					return
@@ -122,7 +121,7 @@ func MetricHandler(zlog *zap.SugaredLogger, s routers.Storage) http.HandlerFunc 
 			}
 		case handlers.Gauge:
 			{
-				gauge, err := s.Gauge(req.ID)
+				gauge, err := s.Gauge(r.Context(), req.ID)
 				if err != nil {
 					handleError(zlog, err, w)
 					return
@@ -166,7 +165,7 @@ func MetricHandlerRouterParams(zlog *zap.SugaredLogger, s routers.Storage) http.
 		switch mType {
 		case handlers.Counter:
 			{
-				counter, err := s.Counter(mName)
+				counter, err := s.Counter(r.Context(), mName)
 				if err != nil {
 					if errors.Is(err, serrors.ErrNotFound) {
 						http.Error(w, "Not found", http.StatusNotFound)
@@ -186,7 +185,6 @@ func MetricHandlerRouterParams(zlog *zap.SugaredLogger, s routers.Storage) http.
 				if err != nil {
 					zlog.Errorf("%v: %v", errFailedToFetchCounter, err)
 
-					log.Printf("%v: %v", errFailedToFetchCounter, err)
 					http.Error(w, internalErrMsg, http.StatusInternalServerError)
 					return
 				}
@@ -194,7 +192,7 @@ func MetricHandlerRouterParams(zlog *zap.SugaredLogger, s routers.Storage) http.
 			}
 		case handlers.Gauge:
 			{
-				gauge, err := s.Gauge(mName)
+				gauge, err := s.Gauge(r.Context(), mName)
 				if err != nil {
 					if errors.Is(err, serrors.ErrNotFound) {
 						http.Error(w, "Not found", http.StatusNotFound)

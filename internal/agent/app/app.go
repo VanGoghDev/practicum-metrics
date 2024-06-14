@@ -7,8 +7,9 @@ import (
 	"time"
 
 	"github.com/VanGoghDev/practicum-metrics/internal/agent/config"
-	"github.com/VanGoghDev/practicum-metrics/internal/agent/services/consumer"
 	"github.com/VanGoghDev/practicum-metrics/internal/agent/services/metrics"
+	"github.com/VanGoghDev/practicum-metrics/internal/agent/services/sender"
+	"github.com/VanGoghDev/practicum-metrics/internal/agent/transport"
 	"github.com/VanGoghDev/practicum-metrics/internal/domain/models"
 	"go.uber.org/zap"
 )
@@ -18,14 +19,14 @@ var (
 	ErrMetricsProviderNil = errors.New("metrics provider is not initialized")
 )
 
-type ServerConsumer interface {
+type Sender interface {
 	SendMetrics(metrics []*models.Metrics) error
 }
 
 type App struct {
 	Log             *zap.Logger
-	Consumer        ServerConsumer
-	MetricsProvider consumer.MetricsProvider
+	Sender          Sender
+	MetricsProvider sender.MetricsProvider
 
 	reportInterval time.Duration
 	pollInterval   time.Duration
@@ -33,11 +34,19 @@ type App struct {
 
 func New(log *zap.Logger, cfg *config.Config) *App {
 	metricsService := metrics.New(log)
-	csmr := consumer.New(log, metricsService, &http.Client{}, cfg.Address)
+	sndr := sender.New(
+		log,
+		metricsService,
+		&http.Client{
+			Transport: &transport.CompressionTripper{
+				Proxied: http.DefaultTransport,
+			},
+		},
+		cfg.Address)
 
 	return &App{
 		Log:             log,
-		Consumer:        csmr,
+		Sender:          sndr,
 		MetricsProvider: metricsService,
 		reportInterval:  cfg.ReportInterval,
 		pollInterval:    cfg.PollInterval,
@@ -53,7 +62,7 @@ func (a *App) RunApp() error {
 
 func (a *App) Run() error {
 	const op = "app.Run"
-	if a.Consumer == nil {
+	if a.Sender == nil {
 		return fmt.Errorf("%s: %w", op, ErrConsumerServiceNil)
 	}
 
@@ -72,7 +81,9 @@ func (a *App) Run() error {
 
 	reportTicker := time.NewTicker(a.reportInterval)
 	defer reportTicker.Stop()
-
+	retriesCount := 0
+	maxRetriesCount := 3
+	f := 2
 	for {
 		select {
 		case <-pollTicker.C:
@@ -82,8 +93,17 @@ func (a *App) Run() error {
 				a.Log.Warn(fmt.Sprintf("failed to read metrics %s", err))
 			}
 		case <-reportTicker.C:
-			err = a.Consumer.SendMetrics(metricsV)
+			err = a.Sender.SendMetrics(metricsV)
 			if err != nil {
+				if retriesCount >= maxRetriesCount {
+					pollTicker.Stop()
+					reportTicker.Stop()
+					return fmt.Errorf("tried to send metric %d times, error is: %w", retriesCount, err)
+				}
+				retriesCount++
+				newInterval := (retriesCount * f) - 1
+				reportTicker.Stop()
+				reportTicker = time.NewTicker(time.Duration(newInterval) * time.Second)
 				a.Log.Warn(fmt.Sprintf("failed to send metrics %s", err))
 			}
 			pollCount = 0

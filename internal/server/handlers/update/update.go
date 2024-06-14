@@ -20,6 +20,7 @@ func UpdateHandler(zlog *zap.SugaredLogger, storage routers.Storage) http.Handle
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		req := &models.Metrics{}
+
 		dec := json.NewDecoder(r.Body)
 		if err := dec.Decode(&req); err != nil {
 			zlog.Warnf("failed to decode JSON body", zap.Error(err))
@@ -39,17 +40,17 @@ func UpdateHandler(zlog *zap.SugaredLogger, storage routers.Storage) http.Handle
 
 		switch req.MType {
 		case handlers.Gauge:
-			err := storage.SaveGauge(req.ID, *req.Value)
+			err := storage.SaveGauge(r.Context(), req.ID, *req.Value)
 			if err != nil {
 				zlog.Warnf("failed to save gauge: %v", err) // переделать лог
 				http.Error(w, internalErrMsg, http.StatusInternalServerError)
 				return
 			}
 		case handlers.Counter:
-			err := storage.SaveCount(req.ID, *req.Delta)
+			err := storage.SaveCount(r.Context(), req.ID, *req.Delta)
 			if err != nil {
 				zlog.Warnf("failed to save counter: %v", err) // переделать лог
-				http.Error(w, "Internal error", http.StatusInternalServerError)
+				http.Error(w, internalErrMsg, http.StatusInternalServerError)
 				return
 			}
 		}
@@ -89,10 +90,10 @@ func UpdateHandlerRouteParams(zlog *zap.SugaredLogger, storage routers.Storage) 
 
 		if mType == handlers.Gauge {
 			if val, err := strconv.ParseFloat(mVal, 64); err == nil {
-				err := storage.SaveGauge(mName, val)
+				err := storage.SaveGauge(r.Context(), mName, val)
 				if err != nil {
 					zlog.Warnf("failed to save gauge: %v", err)
-					http.Error(w, "Internal error", http.StatusInternalServerError)
+					http.Error(w, internalErrMsg, http.StatusInternalServerError)
 					return
 				}
 			} else {
@@ -103,7 +104,7 @@ func UpdateHandlerRouteParams(zlog *zap.SugaredLogger, storage routers.Storage) 
 
 		if mType == handlers.Counter {
 			if val, err := strconv.ParseInt(mVal, 0, 64); err == nil {
-				err := storage.SaveCount(mName, val)
+				err := storage.SaveCount(r.Context(), mName, val)
 				if err != nil {
 					zlog.Warnf("failed to save counter: %v", err)
 					http.Error(w, "Internal error", http.StatusInternalServerError)
