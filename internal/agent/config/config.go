@@ -12,6 +12,7 @@ import (
 type Config struct {
 	Address        string        `env:"ADDRESS"`
 	Loglevel       string        `env:"LOGLVL"`
+	Key            string        `env:"KEY"`
 	ReportInterval time.Duration `env:"REPORTINTERVAL"`
 	PollInterval   time.Duration `env:"POLLINTERVAL"`
 }
@@ -29,7 +30,7 @@ func Load() (config *Config, err error) {
 	}
 
 	var reportInteval, pollInterval int64
-	var logLevel, flagAddress string
+	var logLevel, flagAddress, flagKey string
 
 	flag.StringVar(&flagAddress, "a", "localhost:8080", "address and port to run server")
 	flag.Int64Var(&reportInteval,
@@ -37,6 +38,7 @@ func Load() (config *Config, err error) {
 		"report interval (interval of requests to consumer, in seconds)")
 	flag.Int64Var(&pollInterval, "p", defaultPollInterval, "poll interval (interval of metrics fetch, in seconds)")
 	flag.StringVar(&logLevel, "lvl", "info", "log level")
+	flag.StringVar(&flagKey, "k", "", "signature key")
 
 	flag.Parse()
 
@@ -56,5 +58,9 @@ func Load() (config *Config, err error) {
 		cfg.PollInterval = time.Duration(pollInterval) * time.Second
 	}
 
+	if _, present := os.LookupEnv("KEY"); !present {
+		cfg.Key = flagKey
+	}
+	cfg.Key = "secret"
 	return &cfg, nil
 }

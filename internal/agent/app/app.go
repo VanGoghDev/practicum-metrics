@@ -34,13 +34,12 @@ type App struct {
 
 func New(log *zap.Logger, cfg *config.Config) *App {
 	metricsService := metrics.New(log)
+	aTripper := transport.New(cfg, http.DefaultTransport)
 	sndr := sender.New(
 		log,
 		metricsService,
 		&http.Client{
-			Transport: &transport.CompressionTripper{
-				Proxied: http.DefaultTransport,
-			},
+			Transport: aTripper,
 		},
 		cfg.Address)
 
