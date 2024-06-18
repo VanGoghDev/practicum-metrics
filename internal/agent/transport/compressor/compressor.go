@@ -21,12 +21,6 @@ func (ct *CompressionTripper) CompressBody(req *http.Request) (*http.Request, er
 		return nil, fmt.Errorf("failed to read request body: %w", err)
 	}
 
-	// ??
-	err = req.Body.Close()
-	if err != nil {
-		return nil, fmt.Errorf("failed to close request body: %w", err)
-	}
-
 	buf := bytes.NewBuffer(nil)
 	zb := gzip.NewWriter(buf)
 	_, err = zb.Write(body)
@@ -43,6 +37,7 @@ func (ct *CompressionTripper) CompressBody(req *http.Request) (*http.Request, er
 	if err != nil {
 		return nil, fmt.Errorf("failed to close gzip: %w", err)
 	}
+
 	req.Body = io.NopCloser(buf)
 	req.ContentLength = int64(buf.Len())
 	req.Header.Set("Content-Encoding", "gzip")

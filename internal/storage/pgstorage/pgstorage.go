@@ -25,6 +25,7 @@ func New(ctx context.Context, zlog *zap.SugaredLogger, cfg *config.Config) (*PgS
 	pool, err := pgxpool.New(ctx, cfg.DBConnectionString)
 	if err != nil {
 		zlog.Warnf("failed to establich connection with db: %w:", err)
+		return nil, fmt.Errorf("failed to connect to db: %w", err)
 	}
 
 	err = createSchema(ctx, zlog, pool)
@@ -47,8 +48,10 @@ func New(ctx context.Context, zlog *zap.SugaredLogger, cfg *config.Config) (*PgS
 func (s *PgStorage) SaveMetrics(ctx context.Context, metrics []*models.Metrics) (err error) {
 	tx, err := s.pool.BeginTx(ctx, pgx.TxOptions{})
 	defer func() {
-		if err := tx.Rollback(ctx); err != nil {
-			s.zlog.Errorf("failed to rollaback the transaction: %w", err)
+		if err != nil {
+			if err := tx.Rollback(ctx); err != nil {
+				s.zlog.Errorf("failed to rollaback the transaction: %w", err)
+			}
 		}
 	}()
 	if err != nil {

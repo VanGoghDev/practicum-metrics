@@ -47,8 +47,9 @@ func (s *ServerConsumer) SendMetrics(metrics []*models.Metrics) error {
 		http.MethodPost,
 		fmt.Sprintf("http://%s/updates/", s.url),
 		buf)
+	request.Close = true
 	if err != nil {
-		return fmt.Errorf("failed to create request for gauge update %w", err)
+		return fmt.Errorf("failed to create request for metrics update %w", err)
 	}
 
 	err = s.sendRequest(request)
@@ -62,7 +63,7 @@ func (s *ServerConsumer) sendRequest(request *http.Request) error {
 	resp, err := s.client.Do(request)
 	if err != nil {
 		s.zlog.Sugar().Errorf("unexpected error %w", err)
-		return fmt.Errorf("failed to save gauge on server %w", err)
+		return fmt.Errorf("failed to send metrics to server %w", err)
 	}
 	defer func() {
 		err = dclose(resp.Body)

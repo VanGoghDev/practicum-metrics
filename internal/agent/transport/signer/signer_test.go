@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"crypto/hmac"
 	"crypto/sha256"
+	"encoding/hex"
 	"io"
 	"net/http"
 	"testing"
@@ -58,8 +59,9 @@ func TestSignerTripper_SignBody(t *testing.T) {
 
 			sign := getSignature(got, tt.fields.key)
 			hV := got.Header.Get("HashSHA256")
+			should, _ := hex.DecodeString(hV)
 			assert.NotEmpty(t, hV)
-			assert.True(t, hmac.Equal(sign, []byte(hV)))
+			assert.True(t, hmac.Equal(sign, should))
 		})
 	}
 }

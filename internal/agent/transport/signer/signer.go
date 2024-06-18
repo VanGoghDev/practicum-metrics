@@ -35,19 +35,17 @@ func (st *SignerTripper) SignBody(req *http.Request) (*http.Request, error) {
 		return nil, fmt.Errorf("failed to read request body: %w", err)
 	}
 
-	err = req.Body.Close()
-	if err != nil {
-		return nil, fmt.Errorf("failed to close request body: %w", err)
-	}
-	req.Body = io.NopCloser(bytes.NewBuffer(body))
-
-	io.NopCloser(bytes.NewBuffer(body))
-
 	h := hmac.New(sha256.New, []byte(st.key))
 	h.Write(body)
 	dst := h.Sum(nil)
 	v := hex.EncodeToString(dst)
 	req.Header.Set("HashSHA256", v)
+
+	err = req.Body.Close()
+	if err != nil {
+		return nil, fmt.Errorf("failed to close request body: %w", err)
+	}
+	req.Body = io.NopCloser(bytes.NewBuffer(body))
 	return req, nil
 }
 

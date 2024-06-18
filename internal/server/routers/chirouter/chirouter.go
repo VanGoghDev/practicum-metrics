@@ -17,8 +17,8 @@ func BuildRouter(s routers.Storage, log *zap.Logger, cfg *config.Config) chi.Rou
 	r := chi.NewRouter()
 	sugarlog := log.Sugar()
 	r.Use(logger.New(sugarlog))
-	r.Use(compressor.New(sugarlog))
 	r.Use(signature.New(sugarlog, cfg))
+	r.Use(compressor.New(sugarlog))
 
 	r.Route("/", func(r chi.Router) {
 		r.Get("/", metrics.MetricsHandler(sugarlog, s))

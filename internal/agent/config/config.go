@@ -61,6 +61,5 @@ func Load() (config *Config, err error) {
 	if _, present := os.LookupEnv("KEY"); !present {
 		cfg.Key = flagKey
 	}
-	cfg.Key = "secret"
 	return &cfg, nil
 }
