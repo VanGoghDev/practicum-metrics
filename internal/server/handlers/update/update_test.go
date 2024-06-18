@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/VanGoghDev/practicum-metrics/internal/domain/models"
+	"github.com/VanGoghDev/practicum-metrics/internal/server/config"
 	"github.com/VanGoghDev/practicum-metrics/internal/server/logger"
 	"github.com/VanGoghDev/practicum-metrics/internal/server/routers/chirouter"
 	"github.com/VanGoghDev/practicum-metrics/internal/storage/memstorage"
@@ -105,7 +106,7 @@ func TestUpdateHandler(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			log, _ := logger.New("Info")
 			s, _ := memstorage.New(log)
-			r := chirouter.BuildRouter(s, log, nil)
+			r := chirouter.BuildRouter(s, log, &config.Config{})
 			srv := httptest.NewServer(r)
 			defer srv.Close()
 
@@ -129,7 +130,7 @@ func TestGzipCompression(t *testing.T) {
 	s.GaugesM = map[string]float64{
 		"Alloc": 2.0,
 	}
-	r := chirouter.BuildRouter(s, log, nil)
+	r := chirouter.BuildRouter(s, log, &config.Config{})
 	srv := httptest.NewServer(r)
 	defer srv.Close()
 

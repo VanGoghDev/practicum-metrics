@@ -9,6 +9,7 @@ import (
 	"github.com/go-resty/resty/v2"
 	"github.com/stretchr/testify/assert"
 
+	"github.com/VanGoghDev/practicum-metrics/internal/server/config"
 	"github.com/VanGoghDev/practicum-metrics/internal/server/logger"
 	"github.com/VanGoghDev/practicum-metrics/internal/server/routers/chirouter"
 	"github.com/VanGoghDev/practicum-metrics/internal/storage/memstorage"
@@ -67,7 +68,7 @@ func TestMetricHandler(t *testing.T) {
 			memstrg, _ := memstorage.New(log)
 			memstrg.CountersM = tt.countersM
 			memstrg.GaugesM = tt.gaugesM
-			r := chirouter.BuildRouter(memstrg, log, nil)
+			r := chirouter.BuildRouter(memstrg, log, &config.Config{})
 			srv := httptest.NewServer(r)
 			defer srv.Close()
 
