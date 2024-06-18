@@ -37,8 +37,7 @@ func Load() (config *Config, err error) {
 	flag.StringVar(&flagLoglevel, "lvl", "info", "log level")
 	flag.StringVar(&flagKey, "k", "", "signature key")
 	flag.Int64Var(&flagStoreInterval, "i", defaultStoreInterval, "store interval in seconds")
-	flag.StringVar(&flagFileStoragePath,
-		"f", "/tmp/metrics-db.json", "path to file storage")
+	flag.StringVar(&flagFileStoragePath, "f", "", "path to file storage")
 	flag.StringVar(&flagDBConnection, "d", "", "db connection string")
 	flag.BoolVar(&flagRestore, "r", true, "restore previous state or not")
 	flag.Parse()
