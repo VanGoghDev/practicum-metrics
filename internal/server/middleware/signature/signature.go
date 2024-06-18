@@ -17,6 +17,7 @@ func New(zlog *zap.SugaredLogger, cfg *config.Config) func(next http.Handler) ht
 		fn := func(w http.ResponseWriter, r *http.Request) {
 			if cfg.Key == "" {
 				next.ServeHTTP(w, r)
+				return
 			}
 
 			body, err := io.ReadAll(r.Body)
