@@ -71,6 +71,11 @@ func Load() (config *Config, err error) {
 		}
 		cfg.StoreInterval = time.Duration(i) * time.Second
 	}
+
+	if _, present := os.LookupEnv("KEY"); !present {
+		cfg.Key = flagKey
+	}
+
 	// cfg.DBConnectionString = "host=localhost port=5435 user=postgres password=Kd100817 dbname=template1 sslmode=disable"
 	// cfg.Key = "secret"
 	return &cfg, nil
