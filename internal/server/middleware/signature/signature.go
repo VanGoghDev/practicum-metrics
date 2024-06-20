@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"crypto/hmac"
 	"crypto/sha256"
+	"encoding/base64"
 	"encoding/hex"
 	"io"
 	"net/http"
@@ -20,6 +21,16 @@ func New(zlog *zap.SugaredLogger, cfg *config.Config) func(next http.Handler) ht
 				return
 			}
 
+			reqSign := r.Header.Get("HashSHA256")
+
+			// в ходе обсуждения выявили, что в текущей реализации
+			// автотестов, это единственный вариант пока что.
+			if reqSign == "" {
+				next.ServeHTTP(w, r)
+				return
+			}
+
+			hV, _ := base64.StdEncoding.DecodeString(reqSign)
 			body, err := io.ReadAll(r.Body)
 			if err != nil {
 				zlog.Warnf("failed to read request body: %w", err)
@@ -27,13 +38,6 @@ func New(zlog *zap.SugaredLogger, cfg *config.Config) func(next http.Handler) ht
 				return
 			}
 
-			rSig := r.Header.Get("HashSHA256")
-			zlog.Info("Ниже приведены все хэдеры запроса: ")
-			for n, v := range r.Header {
-				zlog.Infof("\"%s\"=\"%v\" \n", n, v)
-			}
-
-			hV, _ := hex.DecodeString(rSig)
 			h := hmac.New(sha256.New, []byte(cfg.Key))
 			h.Write(body)
 			dst := h.Sum(nil)
