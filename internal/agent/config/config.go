@@ -13,6 +13,7 @@ type Config struct {
 	Address        string        `env:"ADDRESS"`
 	Loglevel       string        `env:"LOGLVL"`
 	Key            string        `env:"KEY"`
+	RateLimit      int64         `env:"RATE_LIMIT"`
 	ReportInterval time.Duration `env:"REPORTINTERVAL"`
 	PollInterval   time.Duration `env:"POLLINTERVAL"`
 }
@@ -29,7 +30,7 @@ func Load() (config *Config, err error) {
 		return nil, fmt.Errorf("failed to parse config %w", err)
 	}
 
-	var reportInteval, pollInterval int64
+	var reportInteval, pollInterval, rateLimit int64
 	var logLevel, flagAddress, flagKey string
 
 	flag.StringVar(&flagAddress, "a", "localhost:8080", "address and port to run server")
@@ -39,6 +40,7 @@ func Load() (config *Config, err error) {
 	flag.Int64Var(&pollInterval, "p", defaultPollInterval, "poll interval (interval of metrics fetch, in seconds)")
 	flag.StringVar(&logLevel, "lvl", "info", "log level")
 	flag.StringVar(&flagKey, "k", "", "signature key")
+	flag.Int64Var(&rateLimit, "l", 1, "number of goroutines for sending metrics to server")
 
 	flag.Parse()
 
@@ -61,5 +63,10 @@ func Load() (config *Config, err error) {
 	if _, present := os.LookupEnv("KEY"); !present {
 		cfg.Key = flagKey
 	}
+
+	if _, present := os.LookupEnv("RATE_LIMIT"); !present {
+		cfg.RateLimit = rateLimit
+	}
+
 	return &cfg, nil
 }

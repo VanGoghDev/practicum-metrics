@@ -6,7 +6,9 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"time"
 
+	"github.com/VanGoghDev/practicum-metrics/internal/agent/services/metrics"
 	"github.com/VanGoghDev/practicum-metrics/internal/domain/models"
 	"go.uber.org/zap"
 )
@@ -15,28 +17,76 @@ type HTTPClient interface {
 	Do(req *http.Request) (*http.Response, error)
 }
 
-type MetricsProvider interface {
-	ReadMetrics(pollCount int64) ([]*models.Metrics, error)
+type Result struct {
+	Error error
 }
 
 type ServerConsumer struct {
-	zlog            *zap.Logger
-	metricsProvider MetricsProvider
-	client          HTTPClient
-	url             string
+	zlog   *zap.Logger
+	client HTTPClient
+	url    string
 }
 
-func New(zlog *zap.Logger, metricsProvider MetricsProvider, client HTTPClient, url string) *ServerConsumer {
+func New(zlog *zap.Logger, client HTTPClient, url string) *ServerConsumer {
 	return &ServerConsumer{
-		zlog:            zlog,
-		metricsProvider: metricsProvider,
-		client:          client,
-		url:             url,
+		zlog:   zlog,
+		client: client,
+		url:    url,
 	}
 }
 
-func (s *ServerConsumer) SendMetrics(metrics []*models.Metrics) error {
-	mJ, err := json.Marshal(metrics)
+func (s *ServerConsumer) SendMetricsCh(
+	metricsCh chan metrics.Result,
+	resultCh chan Result,
+	reportInteval time.Duration) {
+	// defer close(resultCh) //// как закрыть канал? Может через сигнал?
+	for {
+		s.zlog.Info("отправляем метрики")
+		for m := range metricsCh {
+			if m.Err != nil {
+				s.zlog.Warn(fmt.Sprintf("failed to read metrics %v", m.Err))
+				continue
+			}
+			mJ, err := json.Marshal(m.Metrics)
+			if err != nil {
+				s.zlog.Warn(fmt.Sprintf("failed to serialize gauge: %v", err))
+				resultCh <- Result{
+					Error: err,
+				}
+				continue
+			}
+
+			buf := bytes.NewBuffer(mJ)
+
+			request, err := http.NewRequest(
+				http.MethodPost,
+				fmt.Sprintf("http://%s/updates/", s.url),
+				buf)
+			request.Close = true
+			if err != nil {
+				s.zlog.Warn(fmt.Sprintf("failed to create request for metrics update: %v", err))
+				resultCh <- Result{
+					Error: err,
+				}
+				continue
+			}
+
+			err = s.sendRequest(request)
+			if err != nil {
+				s.zlog.Warn(fmt.Sprintf("failed to send request: %v", err))
+				resultCh <- Result{
+					Error: err,
+				}
+				continue
+			}
+		}
+		time.Sleep(reportInteval)
+	}
+
+}
+
+func (s *ServerConsumer) SendMetrics(mtrcs []*models.Metrics) error {
+	mJ, err := json.Marshal(mtrcs)
 	if err != nil {
 		return fmt.Errorf("failed to serialize gauge: %w", err)
 	}
@@ -62,7 +112,7 @@ func (s *ServerConsumer) SendMetrics(metrics []*models.Metrics) error {
 func (s *ServerConsumer) sendRequest(request *http.Request) error {
 	resp, err := s.client.Do(request)
 	if err != nil {
-		s.zlog.Sugar().Errorf("unexpected error %w", err)
+		s.zlog.Sugar().Errorf("failed to send request: %w", err)
 		return fmt.Errorf("failed to send metrics to server %w", err)
 	}
 	defer func() {

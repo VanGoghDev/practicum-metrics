@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math/rand"
 	"runtime"
+	"time"
 
 	"github.com/VanGoghDev/practicum-metrics/internal/domain/models"
 	"go.uber.org/zap"
@@ -13,6 +14,11 @@ const (
 	gaugeType   = "gauge"
 	counterType = "counter"
 )
+
+type Result struct {
+	Err     error
+	Metrics []*models.Metrics
+}
 
 type MetricsProvider struct {
 	log     *zap.Logger
@@ -56,6 +62,35 @@ func New(log *zap.Logger) *MetricsProvider {
 		log:     log,
 		metrics: metrics,
 	}
+}
+
+func (mp *MetricsProvider) ReadMetricsCh(
+	metricsCh chan Result,
+	pollInterval time.Duration,
+	pollCount int64,
+	rateLimit int64) {
+	// Генерируем метрики в этот канал
+	go func() {
+		for {
+			// defer close(metricsCh) // как закрыть канал? Может через сигнал?
+			mp.log.Info("читаем метрики")
+			m := new(runtime.MemStats)
+			runtime.ReadMemStats(m)
+			for _, v := range mp.metrics {
+				err := populateMetric(v, m, pollCount)
+				if err != nil {
+					// Сергей, нужно ваше мнение. Я подумал зачем мне писать в канал метрику,
+					// которую не удалось прочитать. И поэтому просто логирую этот случай.
+					mp.log.Warn(fmt.Sprintf("Failed to fill metric with value: %v", err))
+				}
+			}
+			metricsCh <- Result{
+				Metrics: mp.metrics,
+				Err:     nil,
+			}
+			time.Sleep(pollInterval)
+		}
+	}()
 }
 
 func (mp *MetricsProvider) ReadMetrics(pollCount int64) ([]*models.Metrics, error) {

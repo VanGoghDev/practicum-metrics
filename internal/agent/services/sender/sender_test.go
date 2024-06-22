@@ -7,7 +7,6 @@ import (
 	"testing"
 
 	"github.com/VanGoghDev/practicum-metrics/internal/agent/http/mocks"
-	"github.com/VanGoghDev/practicum-metrics/internal/agent/services/metrics"
 	"github.com/VanGoghDev/practicum-metrics/internal/domain/models"
 	"github.com/stretchr/testify/assert"
 )
@@ -78,9 +77,7 @@ func tests() []struct {
 func TestSendGauge(t *testing.T) {
 	for _, tt := range tests() {
 		t.Run(tt.name, func(t *testing.T) {
-			metricsProviderMock := &metrics.MetricsProvider{}
 			s := &ServerConsumer{
-				metricsProvider: metricsProviderMock,
 				client: &mocks.MockClient{
 					DoFunc: tt.mockHTTPFunc,
 				},
@@ -99,9 +96,7 @@ func TestSendGauge(t *testing.T) {
 func TestSendCounter(t *testing.T) {
 	for _, tt := range tests() {
 		t.Run(tt.name, func(t *testing.T) {
-			metricsProviderMock := &metrics.MetricsProvider{}
 			s := &ServerConsumer{
-				metricsProvider: metricsProviderMock,
 				client: &mocks.MockClient{
 					DoFunc: tt.mockHTTPFunc,
 				},

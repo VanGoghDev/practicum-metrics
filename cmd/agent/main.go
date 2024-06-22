@@ -19,6 +19,11 @@ func main() {
 	if err != nil {
 		log.Fatal("failed to init logger %w", err)
 	}
+	zlog.Sugar().Infow("config",
+		"rateLimit", cfg.RateLimit,
+		"pollInterval", cfg.PollInterval,
+		"reportInterval", cfg.ReportInterval,
+	)
 
 	zlog.Info("Logger init")
 
