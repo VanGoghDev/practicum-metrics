@@ -21,7 +21,8 @@ var (
 )
 
 type MetricsProvider interface {
-	ReadMetricsCh(metricsCh chan metrics.Result, pollInterval time.Duration, pollCount int64, rateLimit int64)
+	ReadMetricsCh(metricsCh chan metrics.Result, pollInterval time.Duration, pollCount int64)
+	ReadAdditionalMetrics(metricsCh chan metrics.Result, pollInterval time.Duration)
 	ReadMetrics(pollCount int64) ([]*models.Metrics, error)
 }
 
@@ -93,7 +94,8 @@ func (a *App) Run() error {
 
 	wg.Add(1)
 	// считаем метрики (горутина спит по установленному таймауту).
-	a.MetricsProvider.ReadMetricsCh(metricsCh, a.pollInterval, int64(pollCount), a.rateLimit)
+	a.MetricsProvider.ReadMetricsCh(metricsCh, a.pollInterval, int64(pollCount))
+	a.MetricsProvider.ReadAdditionalMetrics(metricsCh, a.pollInterval)
 
 	// создадим воркеров и каждый будет отправлять запрос на сервер.
 	for w := 1; w <= int(a.rateLimit); w++ {
@@ -105,94 +107,16 @@ func (a *App) Run() error {
 		if r.Error != nil {
 			retriesCount++
 			a.Log.Info("result chanel contains errors")
-			// if maxRetriesCount <= retriesCount {
-			// 	close(metricsCh)
-			// 	close(resultCh)
-			// 	return fmt.Errorf("tried to send metric %d times, error is: %w", retriesCount, r.Error)
-			// }
+			if maxRetriesCount <= retriesCount {
+				// Мне кажется я совершенно неверно закрываю каналы. Как я понял, закрывать нужно
+				// там же где ты и пишешь. Вот не знаю, надо было как-то через контекст реализовать это?
+				// Например если в генерилку передавать контекст и отменять его тут.
+				close(metricsCh)
+				close(resultCh)
+				return fmt.Errorf("tried to send metric %d times, error is: %w", retriesCount, r.Error)
+			}
 		}
 	}
 	wg.Wait()
 	return nil
-	// pollTicker := time.NewTicker(a.pollInterval)
-	// defer pollTicker.Stop()
-
-	// reportTicker := time.NewTicker(a.reportInterval)
-	// defer reportTicker.Stop()
-	// retriesCount := 0
-	// maxRetriesCount := 3
-	// f := 2
-	// for {
-	// 	select {
-	// 	case <-pollTicker.C:
-	// 		pollCount++
-	// 		a.MetricsProvider.ReadMetricsCh(metricsCh, int64(pollCount), a.rateLimit)
-	// 	case <-reportTicker.C:
-	// 		// создаем воркеров
-	// 		for w := 1; w <= int(a.rateLimit); w++ {
-	// 			go a.Sender.SendMetricsCh(metricsCh, resultCh)
-	// 			go func() {
-	// 				for r := range resultCh {
-	// 					if r.Error != nil {
-	// 						if retriesCount >= maxRetriesCount {
-	// 							pollTicker.Stop()
-	// 							reportTicker.Stop()
-	// 							close(resultCh)
-	// 							return
-	// 							//return fmt.Errorf("tried to send metric %d times, worker: %d, error is: %w", retriesCount, w, r.Error)
-	// 						}
-	// 						retriesCount++
-	// 						newInterval := (retriesCount * f) - 1
-	// 						reportTicker.Stop()
-	// 						reportTicker = time.NewTicker(time.Duration(newInterval) * time.Second)
-	// 						a.Log.Warn(fmt.Sprintf("failed to send metrics, worker: %d, error is: %v", w, r.Error))
-	// 					}
-	// 				}
-	// 			}()
-	// 		}
-	// 		pollCount = 0
-	// 	case <-resultCh:
-	// 		close(metricsCh)
-	// 		a.Log.Info("Канал закрылся")
-	// 		return nil
-	// 	}
-	// }
-	// metricsV, err := a.MetricsProvider.ReadMetrics(int64(pollCount))
-	// if err != nil {
-	// 	return fmt.Errorf("failed to read metrics %s: %w", op, err)
-	// }
-
-	// pollTicker := time.NewTicker(a.pollInterval)
-	// defer pollTicker.Stop()
-
-	// reportTicker := time.NewTicker(a.reportInterval)
-	// defer reportTicker.Stop()
-	// retriesCount := 0
-	// maxRetriesCount := 3
-	// f := 2
-	// for {
-	// 	select {
-	// 	case <-pollTicker.C:
-	// 		pollCount++
-	// 		metricsV, err = a.MetricsProvider.ReadMetrics(int64(pollCount))
-	// 		if err != nil {
-	// 			a.Log.Warn(fmt.Sprintf("failed to read metrics %s", err))
-	// 		}
-	// 	case <-reportTicker.C:
-	// 		err = a.Sender.SendMetrics(metricsV)
-	// 		if err != nil {
-	// 			if retriesCount >= maxRetriesCount {
-	// 				pollTicker.Stop()
-	// 				reportTicker.Stop()
-	// 				return fmt.Errorf("tried to send metric %d times, error is: %w", retriesCount, err)
-	// 			}
-	// 			retriesCount++
-	// 			newInterval := (retriesCount * f) - 1
-	// 			reportTicker.Stop()
-	// 			reportTicker = time.NewTicker(time.Duration(newInterval) * time.Second)
-	// 			a.Log.Warn(fmt.Sprintf("failed to send metrics %s", err))
-	// 		}
-	// 		pollCount = 0
-	// 	}
-	// }
 }

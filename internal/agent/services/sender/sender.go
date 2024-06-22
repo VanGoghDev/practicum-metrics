@@ -39,9 +39,7 @@ func (s *ServerConsumer) SendMetricsCh(
 	metricsCh chan metrics.Result,
 	resultCh chan Result,
 	reportInteval time.Duration) {
-	// defer close(resultCh) //// как закрыть канал? Может через сигнал?
 	for {
-		s.zlog.Info("отправляем метрики")
 		for m := range metricsCh {
 			if m.Err != nil {
 				s.zlog.Warn(fmt.Sprintf("failed to read metrics %v", m.Err))
@@ -82,7 +80,6 @@ func (s *ServerConsumer) SendMetricsCh(
 		}
 		time.Sleep(reportInteval)
 	}
-
 }
 
 func (s *ServerConsumer) SendMetrics(mtrcs []*models.Metrics) error {

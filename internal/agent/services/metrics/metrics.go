@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/VanGoghDev/practicum-metrics/internal/domain/models"
+	"github.com/shirou/gopsutil/v4/mem"
 	"go.uber.org/zap"
 )
 
@@ -67,8 +68,7 @@ func New(log *zap.Logger) *MetricsProvider {
 func (mp *MetricsProvider) ReadMetricsCh(
 	metricsCh chan Result,
 	pollInterval time.Duration,
-	pollCount int64,
-	rateLimit int64) {
+	pollCount int64) {
 	// Генерируем метрики в этот канал
 	go func() {
 		for {
@@ -86,6 +86,32 @@ func (mp *MetricsProvider) ReadMetricsCh(
 			}
 			metricsCh <- Result{
 				Metrics: mp.metrics,
+				Err:     nil,
+			}
+			time.Sleep(pollInterval)
+		}
+	}()
+}
+
+func (mp *MetricsProvider) ReadAdditionalMetrics(
+	metricsCh chan Result,
+	pollInterval time.Duration) {
+	go func() {
+		metrics := []*models.Metrics{
+			createMetric("TotalMemory", gaugeType),
+			createMetric("FreeMemory", gaugeType),
+			createMetric("CPUutilization1", gaugeType),
+		}
+		for {
+			v, _ := mem.VirtualMemory()
+			val := float64(v.Total)
+			metrics[0].Value = &val
+			val = float64(v.Free)
+			metrics[1].Value = &val
+			val = float64(v.Used)
+			metrics[2].Value = &val
+			metricsCh <- Result{
+				Metrics: metrics,
 				Err:     nil,
 			}
 			time.Sleep(pollInterval)
