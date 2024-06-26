@@ -273,36 +273,3 @@ func (s *PgStorage) pingWithTimeout(ctx context.Context) error {
 	}
 	return nil
 }
-
-func createSchema(ctx context.Context, zlog *zap.SugaredLogger, db *pgxpool.Pool) error {
-	tx, err := db.BeginTx(ctx, pgx.TxOptions{})
-	if err != nil {
-		err = fmt.Errorf("failed to start a transaction: %w", err)
-	}
-	defer func() {
-		if err := tx.Rollback(ctx); err != nil {
-			zlog.Errorf("failed to rollback the transaction: %w", err)
-		}
-	}()
-
-	createSchemaStmts := []string{
-		`CREATE TABLE IF NOT EXISTS metrics(
-			name 	VARCHAR(200) PRIMARY KEY,
-			g_type 	VARCHAR(200) NOT NULL,
-			g_value DOUBLE PRECISION NOT NULL,
-			delta 	bigint NOT NULL,
-			UNIQUE(name, g_type)
-		)`,
-	}
-
-	for _, stmt := range createSchemaStmts {
-		if _, err := tx.Exec(ctx, stmt); err != nil {
-			return fmt.Errorf("failed to execute statement `%s`: %w", stmt, err)
-		}
-	}
-
-	if err := tx.Commit(ctx); err != nil {
-		return fmt.Errorf("failed to commit the transaction: %w", err)
-	}
-	return err
-}
