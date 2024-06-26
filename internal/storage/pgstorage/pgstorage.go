@@ -2,6 +2,7 @@ package pgstorage
 
 import (
 	"context"
+	"embed"
 	"errors"
 	"fmt"
 	"time"
@@ -10,6 +11,10 @@ import (
 	"github.com/VanGoghDev/practicum-metrics/internal/server/config"
 	"github.com/VanGoghDev/practicum-metrics/internal/server/handlers"
 	"github.com/VanGoghDev/practicum-metrics/internal/storage/serrors"
+
+	"github.com/golang-migrate/migrate/v4"
+	_ "github.com/golang-migrate/migrate/v4/database/postgres"
+	"github.com/golang-migrate/migrate/v4/source/iofs"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
@@ -28,14 +33,17 @@ func New(ctx context.Context, zlog *zap.SugaredLogger, cfg *config.Config) (*PgS
 		return nil, fmt.Errorf("failed to connect to db: %w", err)
 	}
 
-	err = createSchema(ctx, zlog, pool)
-	if err != nil {
-		zlog.Warnf("failed to create schema: %w", err)
-		return nil, fmt.Errorf("failed to create schema: %w", err)
-	}
+	// err = createSchema(ctx, zlog, pool)
+
 	s := &PgStorage{
 		zlog: zlog,
 		pool: pool,
+	}
+
+	err = s.runMigrations(cfg.DBConnectionString)
+	if err != nil {
+		zlog.Warnf("failed to create schema: %w", err)
+		return nil, fmt.Errorf("failed to create schema: %w", err)
 	}
 
 	err = s.pingWithTimeout(ctx)
@@ -43,6 +51,31 @@ func New(ctx context.Context, zlog *zap.SugaredLogger, cfg *config.Config) (*PgS
 		return nil, fmt.Errorf("failed to ping with timeout: %w", err)
 	}
 	return s, nil
+}
+
+//go:embed migrations/*.sql
+var migrationsDir embed.FS
+
+func (s *PgStorage) runMigrations(dsn string) error {
+	d, err := iofs.New(migrationsDir, "migrations")
+	if err != nil {
+		return fmt.Errorf("failed to return an iofs driver: %w", err)
+	}
+
+	m, err := migrate.NewWithSourceInstance(
+		"iofs",
+		d,
+		dsn,
+	)
+	if err != nil {
+		return fmt.Errorf("failed to get a create new migrate instance: %w", err)
+	}
+	if err := m.Up(); err != nil {
+		if !errors.Is(err, migrate.ErrNoChange) {
+			return fmt.Errorf("failed to apply migrations to the DB: %w", err)
+		}
+	}
+	return nil
 }
 
 func (s *PgStorage) SaveMetrics(ctx context.Context, metrics []*models.Metrics) (err error) {
