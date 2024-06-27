@@ -1,7 +1,10 @@
 package metrics
 
 import (
+	"context"
+	"sync"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/zap"
@@ -19,8 +22,23 @@ func TestReadMetrics(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			logger, _ := zap.NewProduction()
 			mp := New(logger)
-			metricsMap, _ := mp.ReadMetrics(0)
-			assert.NotEmpty(t, metricsMap)
+			metricsCh := make(chan Result)
+			ctx := context.Background()
+			ctx, cancel := context.WithCancel(ctx)
+			defer cancel()
+
+			var wg sync.WaitGroup
+
+			wg.Add(1)
+			go mp.ReadMetrics(ctx, metricsCh, time.Second, 1)
+
+			for r := range metricsCh {
+				assert.NotEmpty(t, r.Metrics)
+				time.Sleep(200 * time.Millisecond)
+				cancel()
+				return
+			}
+			wg.Wait()
 		})
 	}
 }

@@ -1,6 +1,7 @@
 package app
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"net/http"
@@ -11,7 +12,6 @@ import (
 	"github.com/VanGoghDev/practicum-metrics/internal/agent/services/metrics"
 	"github.com/VanGoghDev/practicum-metrics/internal/agent/services/sender"
 	"github.com/VanGoghDev/practicum-metrics/internal/agent/transport"
-	"github.com/VanGoghDev/practicum-metrics/internal/domain/models"
 	"go.uber.org/zap"
 )
 
@@ -21,14 +21,16 @@ var (
 )
 
 type MetricsProvider interface {
-	ReadMetricsCh(metricsCh chan metrics.Result, pollInterval time.Duration, pollCount int64)
-	ReadAdditionalMetrics(metricsCh chan metrics.Result, pollInterval time.Duration)
-	ReadMetrics(pollCount int64) ([]*models.Metrics, error)
+	ReadMetrics(ctx context.Context, metricsCh chan<- metrics.Result, pollInterval time.Duration, pollCount int64)
 }
 
 type Sender interface {
-	SendMetricsCh(metricsCh chan metrics.Result, resultCh chan sender.Result, reportInteval time.Duration)
-	SendMetrics(metrics []*models.Metrics) error
+	SendMetrics(
+		ctx context.Context,
+		metricsCh <-chan metrics.Result,
+		resultCh chan<- sender.Result,
+		reportInteval time.Duration,
+	)
 }
 
 type App struct {
@@ -79,28 +81,28 @@ func (a *App) Run() error {
 	}
 
 	var wg sync.WaitGroup
+	ctx := context.Background()
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
 
 	pollCount := 0
 	retriesCount := 0
 	maxRetriesCount := 3
 	_ = maxRetriesCount
-	// сюда записываю метрики
-	// не знаю какой канал использовать правильнее. Буферизированный или нет.
-	// Мне показалось, что лучше небуферизированный, ведь операция чтения метрики гораздо быстрее отправки.
-	metricsCh := make(chan metrics.Result)
+
+	metricsCh := make(chan metrics.Result, a.rateLimit)
 
 	// сюда записываю результат работы "отправителя".
 	resultCh := make(chan sender.Result)
 
 	wg.Add(1)
 	// считаем метрики (горутина спит по установленному таймауту).
-	a.MetricsProvider.ReadMetricsCh(metricsCh, a.pollInterval, int64(pollCount))
-	a.MetricsProvider.ReadAdditionalMetrics(metricsCh, a.pollInterval)
+	go a.MetricsProvider.ReadMetrics(ctx, metricsCh, a.pollInterval, int64(pollCount))
 
 	// создадим воркеров и каждый будет отправлять запрос на сервер.
 	for w := 1; w <= int(a.rateLimit); w++ {
 		wg.Add(1)
-		go a.Sender.SendMetricsCh(metricsCh, resultCh, a.reportInterval)
+		go a.Sender.SendMetrics(ctx, metricsCh, resultCh, a.reportInterval)
 	}
 
 	for r := range resultCh {
@@ -108,11 +110,7 @@ func (a *App) Run() error {
 			retriesCount++
 			a.Log.Info("result chanel contains errors")
 			if maxRetriesCount <= retriesCount {
-				// Мне кажется я совершенно неверно закрываю каналы. Как я понял, закрывать нужно
-				// там же где ты и пишешь. Вот не знаю, надо было как-то через контекст реализовать это?
-				// Например если в генерилку передавать контекст и отменять его тут.
-				close(metricsCh)
-				close(resultCh)
+				cancel()
 				return fmt.Errorf("tried to send metric %d times, error is: %w", retriesCount, r.Error)
 			}
 		}

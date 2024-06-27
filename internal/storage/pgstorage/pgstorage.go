@@ -33,8 +33,6 @@ func New(ctx context.Context, zlog *zap.SugaredLogger, cfg *config.Config) (*PgS
 		return nil, fmt.Errorf("failed to connect to db: %w", err)
 	}
 
-	// err = createSchema(ctx, zlog, pool)
-
 	s := &PgStorage{
 		zlog: zlog,
 		pool: pool,

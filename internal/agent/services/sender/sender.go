@@ -2,6 +2,7 @@ package sender
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -9,7 +10,6 @@ import (
 	"time"
 
 	"github.com/VanGoghDev/practicum-metrics/internal/agent/services/metrics"
-	"github.com/VanGoghDev/practicum-metrics/internal/domain/models"
 	"go.uber.org/zap"
 )
 
@@ -23,28 +23,32 @@ type Result struct {
 
 type ServerConsumer struct {
 	zlog   *zap.Logger
-	client HTTPClient
+	Client HTTPClient
 	url    string
 }
 
 func New(zlog *zap.Logger, client HTTPClient, url string) *ServerConsumer {
 	return &ServerConsumer{
 		zlog:   zlog,
-		client: client,
+		Client: client,
 		url:    url,
 	}
 }
 
-func (s *ServerConsumer) SendMetricsCh(
-	metricsCh chan metrics.Result,
-	resultCh chan Result,
-	reportInteval time.Duration) {
+func (s *ServerConsumer) SendMetrics(
+	ctx context.Context,
+	metricsCh <-chan metrics.Result,
+	resultCh chan<- Result,
+	reportInteval time.Duration,
+) {
 	for {
-		for m := range metricsCh {
+		select {
+		case m := <-metricsCh:
 			if m.Err != nil {
 				s.zlog.Warn(fmt.Sprintf("failed to read metrics %v", m.Err))
 				continue
 			}
+
 			mJ, err := json.Marshal(m.Metrics)
 			if err != nil {
 				s.zlog.Warn(fmt.Sprintf("failed to serialize gauge: %v", err))
@@ -77,37 +81,20 @@ func (s *ServerConsumer) SendMetricsCh(
 				}
 				continue
 			}
+			resultCh <- Result{
+				Error: nil,
+			}
+		case <-ctx.Done():
+			close(resultCh)
+			return
 		}
+
 		time.Sleep(reportInteval)
 	}
 }
 
-func (s *ServerConsumer) SendMetrics(mtrcs []*models.Metrics) error {
-	mJ, err := json.Marshal(mtrcs)
-	if err != nil {
-		return fmt.Errorf("failed to serialize gauge: %w", err)
-	}
-
-	buf := bytes.NewBuffer(mJ)
-
-	request, err := http.NewRequest(
-		http.MethodPost,
-		fmt.Sprintf("http://%s/updates/", s.url),
-		buf)
-	request.Close = true
-	if err != nil {
-		return fmt.Errorf("failed to create request for metrics update %w", err)
-	}
-
-	err = s.sendRequest(request)
-	if err != nil {
-		return fmt.Errorf("failed to send request: %w", err)
-	}
-	return nil
-}
-
 func (s *ServerConsumer) sendRequest(request *http.Request) error {
-	resp, err := s.client.Do(request)
+	resp, err := s.Client.Do(request)
 	if err != nil {
 		s.zlog.Sugar().Errorf("failed to send request: %w", err)
 		return fmt.Errorf("failed to send metrics to server %w", err)
