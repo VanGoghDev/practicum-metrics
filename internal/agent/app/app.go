@@ -21,7 +21,13 @@ var (
 )
 
 type MetricsProvider interface {
-	ReadMetrics(ctx context.Context, metricsCh chan<- metrics.Result, pollInterval time.Duration, pollCount int64)
+	ReadMetrics(
+		ctx context.Context,
+		metricsCh chan<- metrics.Result,
+		pollInterval time.Duration,
+		pollCount int64,
+		wg *sync.WaitGroup,
+	)
 }
 
 type Sender interface {
@@ -30,6 +36,7 @@ type Sender interface {
 		metricsCh <-chan metrics.Result,
 		resultCh chan<- sender.Result,
 		reportInteval time.Duration,
+		wg *sync.WaitGroup,
 	)
 }
 
@@ -95,14 +102,12 @@ func (a *App) Run() error {
 	// сюда записываю результат работы "отправителя".
 	resultCh := make(chan sender.Result)
 
-	wg.Add(1)
 	// считаем метрики (горутина спит по установленному таймауту).
-	go a.MetricsProvider.ReadMetrics(ctx, metricsCh, a.pollInterval, int64(pollCount))
+	go a.MetricsProvider.ReadMetrics(ctx, metricsCh, a.pollInterval, int64(pollCount), &wg)
 
 	// создадим воркеров и каждый будет отправлять запрос на сервер.
 	for w := 1; w <= int(a.rateLimit); w++ {
-		wg.Add(1)
-		go a.Sender.SendMetrics(ctx, metricsCh, resultCh, a.reportInterval)
+		go a.Sender.SendMetrics(ctx, metricsCh, resultCh, a.reportInterval, &wg)
 	}
 
 	for r := range resultCh {

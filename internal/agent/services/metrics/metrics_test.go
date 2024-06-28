@@ -29,15 +29,17 @@ func TestReadMetrics(t *testing.T) {
 
 			var wg sync.WaitGroup
 
-			wg.Add(1)
-			go mp.ReadMetrics(ctx, metricsCh, time.Second, 1)
+			go mp.ReadMetrics(ctx, metricsCh, time.Second, 1, &wg)
 
-			for r := range metricsCh {
-				assert.NotEmpty(t, r.Metrics)
-				time.Sleep(200 * time.Millisecond)
-				cancel()
-				return
-			}
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				for r := range metricsCh {
+					assert.NotEmpty(t, r.Metrics)
+				}
+			}()
+			time.Sleep(200 * time.Millisecond)
+			cancel()
 			wg.Wait()
 		})
 	}

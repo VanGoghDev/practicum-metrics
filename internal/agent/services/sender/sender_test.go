@@ -112,10 +112,9 @@ func TestSendGauge(t *testing.T) {
 			ctx, cancel := context.WithCancel(ctx)
 			defer cancel()
 
-			wg.Add(1)
 			// Отправим метрики
 			// укажем длинный таймаут, чтобы успеть отменить операцию и не идти вторым кругом.
-			go s.SendMetrics(ctx, metricsCh, resultsCh, time.Second)
+			go s.SendMetrics(ctx, metricsCh, resultsCh, time.Second, &wg)
 
 			wg.Add(1)
 			// Прочитаем ответ

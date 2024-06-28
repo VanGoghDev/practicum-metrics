@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"sync"
 	"time"
 
 	"github.com/VanGoghDev/practicum-metrics/internal/agent/services/metrics"
@@ -40,7 +41,10 @@ func (s *ServerConsumer) SendMetrics(
 	metricsCh <-chan metrics.Result,
 	resultCh chan<- Result,
 	reportInteval time.Duration,
+	wg *sync.WaitGroup,
 ) {
+	wg.Add(1)
+	defer wg.Done()
 	for {
 		select {
 		case m := <-metricsCh:

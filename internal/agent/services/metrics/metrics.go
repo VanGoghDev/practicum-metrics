@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"math/rand"
 	"runtime"
+	"sync"
 	"time"
 
 	"github.com/VanGoghDev/practicum-metrics/internal/domain/models"
@@ -74,7 +75,10 @@ func (mp *MetricsProvider) ReadMetrics(
 	metricsCh chan<- Result,
 	pollInterval time.Duration,
 	pollCount int64,
+	wg *sync.WaitGroup,
 ) {
+	wg.Add(1)
+	defer wg.Done()
 	// Генерируем метрики в этот канал
 	ticker := time.NewTicker(pollInterval)
 	for {
