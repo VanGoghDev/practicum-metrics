@@ -1,13 +1,17 @@
-package sender
+package sender_test
 
 import (
 	"bytes"
+	"context"
 	"io"
 	"net/http"
+	"sync"
 	"testing"
+	"time"
 
 	"github.com/VanGoghDev/practicum-metrics/internal/agent/http/mocks"
 	"github.com/VanGoghDev/practicum-metrics/internal/agent/services/metrics"
+	"github.com/VanGoghDev/practicum-metrics/internal/agent/services/sender"
 	"github.com/VanGoghDev/practicum-metrics/internal/domain/models"
 	"github.com/stretchr/testify/assert"
 )
@@ -78,42 +82,55 @@ func tests() []struct {
 func TestSendGauge(t *testing.T) {
 	for _, tt := range tests() {
 		t.Run(tt.name, func(t *testing.T) {
-			metricsProviderMock := &metrics.MetricsProvider{}
-			s := &ServerConsumer{
-				metricsProvider: metricsProviderMock,
-				client: &mocks.MockClient{
+			s := &sender.ServerConsumer{
+				Client: &mocks.MockClient{
 					DoFunc: tt.mockHTTPFunc,
 				},
 			}
+
 			metricsV := make([]*models.Metrics, 10)
 			metricsV[0] = &models.Metrics{
 				ID:    tt.args.name,
 				Value: &tt.args.value,
 			}
-			err := s.SendMetrics(metricsV)
-			assert.Equal(t, tt.err, err)
-		})
-	}
-}
 
-func TestSendCounter(t *testing.T) {
-	for _, tt := range tests() {
-		t.Run(tt.name, func(t *testing.T) {
-			metricsProviderMock := &metrics.MetricsProvider{}
-			s := &ServerConsumer{
-				metricsProvider: metricsProviderMock,
-				client: &mocks.MockClient{
-					DoFunc: tt.mockHTTPFunc,
-				},
+			var wg sync.WaitGroup
+
+			metricsCh := make(chan metrics.Result)
+			resultsCh := make(chan sender.Result)
+
+			wg.Add(1)
+			go func() {
+				metricsCh <- metrics.Result{
+					Err:     nil,
+					Metrics: metricsV,
+				}
+				close(metricsCh)
+			}()
+
+			ctx := context.Background()
+			ctx, cancel := context.WithCancel(ctx)
+			defer cancel()
+
+			// Отправим метрики
+			// укажем длинный таймаут, чтобы успеть отменить операцию и не идти вторым кругом.
+			go s.SendMetrics(ctx, metricsCh, resultsCh, time.Second, &wg)
+
+			wg.Add(1)
+			// Прочитаем ответ
+			go func() {
+				for r := range resultsCh {
+					assert.Equal(t, tt.err, r.Error)
+				}
+			}()
+
+			for r := range metricsCh {
+				assert.Equal(t, tt.err, r.Err)
+				time.Sleep(200 * time.Millisecond)
+				cancel()
+				return
 			}
-			metricsV := make([]*models.Metrics, 10)
-			val := int64(tt.args.value)
-			metricsV[0] = &models.Metrics{
-				ID:    tt.args.name,
-				Delta: &val,
-			}
-			err := s.SendMetrics(metricsV)
-			assert.Equal(t, tt.err, err)
+			wg.Wait()
 		})
 	}
 }

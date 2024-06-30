@@ -15,7 +15,7 @@ func New(zlog *zap.SugaredLogger) func(next http.Handler) http.Handler {
 
 			start := time.Now()
 			defer func() {
-				zlog.Info("request completed",
+				zlog.Infow("request completed",
 					zap.String("method", r.Method),
 					zap.String("path", r.URL.Path),
 					zap.Duration("duration", time.Since(start)),

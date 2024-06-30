@@ -2,12 +2,15 @@ package sender
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
+	"sync"
+	"time"
 
-	"github.com/VanGoghDev/practicum-metrics/internal/domain/models"
+	"github.com/VanGoghDev/practicum-metrics/internal/agent/services/metrics"
 	"go.uber.org/zap"
 )
 
@@ -15,54 +18,90 @@ type HTTPClient interface {
 	Do(req *http.Request) (*http.Response, error)
 }
 
-type MetricsProvider interface {
-	ReadMetrics(pollCount int64) ([]*models.Metrics, error)
+type Result struct {
+	Error error
 }
 
 type ServerConsumer struct {
-	zlog            *zap.Logger
-	metricsProvider MetricsProvider
-	client          HTTPClient
-	url             string
+	zlog   *zap.Logger
+	Client HTTPClient
+	url    string
 }
 
-func New(zlog *zap.Logger, metricsProvider MetricsProvider, client HTTPClient, url string) *ServerConsumer {
+func New(zlog *zap.Logger, client HTTPClient, url string) *ServerConsumer {
 	return &ServerConsumer{
-		zlog:            zlog,
-		metricsProvider: metricsProvider,
-		client:          client,
-		url:             url,
+		zlog:   zlog,
+		Client: client,
+		url:    url,
 	}
 }
 
-func (s *ServerConsumer) SendMetrics(metrics []*models.Metrics) error {
-	mJ, err := json.Marshal(metrics)
-	if err != nil {
-		return fmt.Errorf("failed to serialize gauge: %w", err)
-	}
+func (s *ServerConsumer) SendMetrics(
+	ctx context.Context,
+	metricsCh <-chan metrics.Result,
+	resultCh chan<- Result,
+	reportInteval time.Duration,
+	wg *sync.WaitGroup,
+) {
+	wg.Add(1)
+	defer wg.Done()
+	for {
+		select {
+		case m := <-metricsCh:
+			if m.Err != nil {
+				s.zlog.Warn(fmt.Sprintf("failed to read metrics %v", m.Err))
+				continue
+			}
 
-	buf := bytes.NewBuffer(mJ)
+			mJ, err := json.Marshal(m.Metrics)
+			if err != nil {
+				s.zlog.Warn(fmt.Sprintf("failed to serialize gauge: %v", err))
+				resultCh <- Result{
+					Error: err,
+				}
+				continue
+			}
 
-	request, err := http.NewRequest(
-		http.MethodPost,
-		fmt.Sprintf("http://%s/updates/", s.url),
-		buf)
-	if err != nil {
-		return fmt.Errorf("failed to create request for gauge update %w", err)
-	}
+			buf := bytes.NewBuffer(mJ)
 
-	err = s.sendRequest(request)
-	if err != nil {
-		return fmt.Errorf("failed to send request: %w", err)
+			request, err := http.NewRequest(
+				http.MethodPost,
+				fmt.Sprintf("http://%s/updates/", s.url),
+				buf)
+			request.Close = true
+			if err != nil {
+				s.zlog.Warn(fmt.Sprintf("failed to create request for metrics update: %v", err))
+				resultCh <- Result{
+					Error: err,
+				}
+				continue
+			}
+
+			err = s.sendRequest(request)
+			if err != nil {
+				s.zlog.Warn(fmt.Sprintf("failed to send request: %v", err))
+				resultCh <- Result{
+					Error: err,
+				}
+				continue
+			}
+			resultCh <- Result{
+				Error: nil,
+			}
+		case <-ctx.Done():
+			close(resultCh)
+			return
+		}
+
+		time.Sleep(reportInteval)
 	}
-	return nil
 }
 
 func (s *ServerConsumer) sendRequest(request *http.Request) error {
-	resp, err := s.client.Do(request)
+	resp, err := s.Client.Do(request)
 	if err != nil {
-		s.zlog.Sugar().Errorf("unexpected error %w", err)
-		return fmt.Errorf("failed to save gauge on server %w", err)
+		s.zlog.Sugar().Errorf("failed to send request: %w", err)
+		return fmt.Errorf("failed to send metrics to server %w", err)
 	}
 	defer func() {
 		err = dclose(resp.Body)

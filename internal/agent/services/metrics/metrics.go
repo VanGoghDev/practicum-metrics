@@ -1,11 +1,15 @@
 package metrics
 
 import (
+	"context"
 	"fmt"
 	"math/rand"
 	"runtime"
+	"sync"
+	"time"
 
 	"github.com/VanGoghDev/practicum-metrics/internal/domain/models"
+	"github.com/shirou/gopsutil/v4/mem"
 	"go.uber.org/zap"
 )
 
@@ -13,6 +17,11 @@ const (
 	gaugeType   = "gauge"
 	counterType = "counter"
 )
+
+type Result struct {
+	Err     error
+	Metrics []*models.Metrics
+}
 
 type MetricsProvider struct {
 	log     *zap.Logger
@@ -50,6 +59,9 @@ func New(log *zap.Logger) *MetricsProvider {
 		createMetric("TotalAlloc", gaugeType),
 		createMetric("RandomValue", gaugeType),
 		createMetric("PollCount", counterType),
+		createMetric("TotalMemory", gaugeType),
+		createMetric("FreeMemory", gaugeType),
+		createMetric("CPUutilization1", gaugeType),
 	}
 
 	return &MetricsProvider{
@@ -58,18 +70,42 @@ func New(log *zap.Logger) *MetricsProvider {
 	}
 }
 
-func (mp *MetricsProvider) ReadMetrics(pollCount int64) ([]*models.Metrics, error) {
-	m := new(runtime.MemStats)
-	runtime.ReadMemStats(m)
-
-	for _, v := range mp.metrics {
-		err := populateMetric(v, m, pollCount)
-		if err != nil {
-			mp.log.Warn(fmt.Sprintf("Failed to fill metric with value: %v", err))
-			continue
+func (mp *MetricsProvider) ReadMetrics(
+	ctx context.Context,
+	metricsCh chan<- Result,
+	pollInterval time.Duration,
+	pollCount int64,
+	wg *sync.WaitGroup,
+) {
+	wg.Add(1)
+	defer wg.Done()
+	// Генерируем метрики в этот канал
+	ticker := time.NewTicker(pollInterval)
+	for {
+		select {
+		case <-ticker.C:
+			mp.log.Info("читаем метрики")
+			m := new(runtime.MemStats)
+			runtime.ReadMemStats(m)
+			vm, err := mem.VirtualMemory()
+			if err != nil {
+				mp.log.Sugar().Warnf("failed to read virtual memory: %w", err)
+			}
+			for _, v := range mp.metrics {
+				err := populateMetric(v, m, vm, pollCount)
+				if err != nil {
+					mp.log.Sugar().Warnf("Failed to fill metric with value: %v", err)
+				}
+			}
+			metricsCh <- Result{
+				Metrics: mp.metrics,
+				Err:     nil,
+			}
+		case <-ctx.Done():
+			close(metricsCh)
+			return
 		}
 	}
-	return mp.metrics, nil
 }
 
 // Создает метрику с ID = name, MType = mType. Значения метрики будут заданы по умолчанию.
@@ -104,7 +140,7 @@ func createMetricDelta(name string, mType string, delta *int64) *models.Metrics 
 }
 
 // Наполняет метрику значением из runtime в зависимости от ID.
-func populateMetric(metric *models.Metrics, m *runtime.MemStats, pollCount int64) error {
+func populateMetric(metric *models.Metrics, m *runtime.MemStats, vm *mem.VirtualMemoryStat, pollCount int64) error {
 	switch metric.ID {
 	case "Alloc":
 		val := float64(m.Alloc)
@@ -186,6 +222,15 @@ func populateMetric(metric *models.Metrics, m *runtime.MemStats, pollCount int64
 		metric.Value = &val
 	case "TotalAlloc":
 		val := float64(m.TotalAlloc)
+		metric.Value = &val
+	case "TotalMemory":
+		val := float64(vm.Total)
+		metric.Value = &val
+	case "FreeMemory":
+		val := float64(vm.Free)
+		metric.Value = &val
+	case "CPUutilization1":
+		val := float64(vm.Used)
 		metric.Value = &val
 	case "RandomValue":
 		val := rand.Float64()

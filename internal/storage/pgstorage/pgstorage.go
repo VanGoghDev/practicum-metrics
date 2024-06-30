@@ -2,6 +2,7 @@ package pgstorage
 
 import (
 	"context"
+	"embed"
 	"errors"
 	"fmt"
 	"time"
@@ -10,6 +11,10 @@ import (
 	"github.com/VanGoghDev/practicum-metrics/internal/server/config"
 	"github.com/VanGoghDev/practicum-metrics/internal/server/handlers"
 	"github.com/VanGoghDev/practicum-metrics/internal/storage/serrors"
+
+	"github.com/golang-migrate/migrate/v4"
+	_ "github.com/golang-migrate/migrate/v4/database/postgres"
+	"github.com/golang-migrate/migrate/v4/source/iofs"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
@@ -25,16 +30,18 @@ func New(ctx context.Context, zlog *zap.SugaredLogger, cfg *config.Config) (*PgS
 	pool, err := pgxpool.New(ctx, cfg.DBConnectionString)
 	if err != nil {
 		zlog.Warnf("failed to establich connection with db: %w:", err)
+		return nil, fmt.Errorf("failed to connect to db: %w", err)
 	}
 
-	err = createSchema(ctx, zlog, pool)
-	if err != nil {
-		zlog.Warnf("failed to create schema: %w", err)
-		return nil, fmt.Errorf("failed to create schema: %w", err)
-	}
 	s := &PgStorage{
 		zlog: zlog,
 		pool: pool,
+	}
+
+	err = s.runMigrations(cfg.DBConnectionString)
+	if err != nil {
+		zlog.Warnf("failed to create schema: %w", err)
+		return nil, fmt.Errorf("failed to create schema: %w", err)
 	}
 
 	err = s.pingWithTimeout(ctx)
@@ -44,11 +51,38 @@ func New(ctx context.Context, zlog *zap.SugaredLogger, cfg *config.Config) (*PgS
 	return s, nil
 }
 
+//go:embed migrations/*.sql
+var migrationsDir embed.FS
+
+func (s *PgStorage) runMigrations(dsn string) error {
+	d, err := iofs.New(migrationsDir, "migrations")
+	if err != nil {
+		return fmt.Errorf("failed to return an iofs driver: %w", err)
+	}
+
+	m, err := migrate.NewWithSourceInstance(
+		"iofs",
+		d,
+		dsn,
+	)
+	if err != nil {
+		return fmt.Errorf("failed to get a create new migrate instance: %w", err)
+	}
+	if err := m.Up(); err != nil {
+		if !errors.Is(err, migrate.ErrNoChange) {
+			return fmt.Errorf("failed to apply migrations to the DB: %w", err)
+		}
+	}
+	return nil
+}
+
 func (s *PgStorage) SaveMetrics(ctx context.Context, metrics []*models.Metrics) (err error) {
 	tx, err := s.pool.BeginTx(ctx, pgx.TxOptions{})
 	defer func() {
-		if err := tx.Rollback(ctx); err != nil {
-			s.zlog.Errorf("failed to rollaback the transaction: %w", err)
+		if err != nil {
+			if err := tx.Rollback(ctx); err != nil {
+				s.zlog.Errorf("failed to rollaback the transaction: %w", err)
+			}
 		}
 	}()
 	if err != nil {
@@ -236,37 +270,4 @@ func (s *PgStorage) pingWithTimeout(ctx context.Context) error {
 		return fmt.Errorf("failed to ping db: %w", err)
 	}
 	return nil
-}
-
-func createSchema(ctx context.Context, zlog *zap.SugaredLogger, db *pgxpool.Pool) error {
-	tx, err := db.BeginTx(ctx, pgx.TxOptions{})
-	if err != nil {
-		err = fmt.Errorf("failed to start a transaction: %w", err)
-	}
-	defer func() {
-		if err := tx.Rollback(ctx); err != nil {
-			zlog.Errorf("failed to rollback the transaction: %w", err)
-		}
-	}()
-
-	createSchemaStmts := []string{
-		`CREATE TABLE IF NOT EXISTS metrics(
-			name 	VARCHAR(200) PRIMARY KEY,
-			g_type 	VARCHAR(200) NOT NULL,
-			g_value DOUBLE PRECISION NOT NULL,
-			delta 	bigint NOT NULL,
-			UNIQUE(name, g_type)
-		)`,
-	}
-
-	for _, stmt := range createSchemaStmts {
-		if _, err := tx.Exec(ctx, stmt); err != nil {
-			return fmt.Errorf("failed to execute statement `%s`: %w", stmt, err)
-		}
-	}
-
-	if err := tx.Commit(ctx); err != nil {
-		return fmt.Errorf("failed to commit the transaction: %w", err)
-	}
-	return err
 }

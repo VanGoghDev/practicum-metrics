@@ -7,6 +7,7 @@ import (
 	"github.com/VanGoghDev/practicum-metrics/internal/server/handlers/update"
 	"github.com/VanGoghDev/practicum-metrics/internal/server/middleware/compressor"
 	"github.com/VanGoghDev/practicum-metrics/internal/server/middleware/logger"
+	"github.com/VanGoghDev/practicum-metrics/internal/server/middleware/signature"
 	"github.com/VanGoghDev/practicum-metrics/internal/server/routers"
 	"github.com/go-chi/chi"
 	"go.uber.org/zap"
@@ -16,6 +17,7 @@ func BuildRouter(s routers.Storage, log *zap.Logger, cfg *config.Config) chi.Rou
 	r := chi.NewRouter()
 	sugarlog := log.Sugar()
 	r.Use(logger.New(sugarlog))
+	r.Use(signature.New(sugarlog, cfg))
 	r.Use(compressor.New(sugarlog))
 
 	r.Route("/", func(r chi.Router) {
