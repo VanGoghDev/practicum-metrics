@@ -9,6 +9,10 @@ import (
 	"go.uber.org/zap"
 )
 
+const (
+	initMapSize = 100
+)
+
 type MemStorage struct {
 	zlog      *zap.Logger
 	GaugesM   map[string]float64
@@ -18,8 +22,8 @@ type MemStorage struct {
 func New(zlog *zap.Logger) (*MemStorage, error) {
 	s := &MemStorage{
 		zlog:      zlog,
-		GaugesM:   make(map[string]float64),
-		CountersM: make(map[string]int64),
+		GaugesM:   make(map[string]float64, initMapSize),
+		CountersM: make(map[string]int64, initMapSize),
 	}
 
 	return s, nil

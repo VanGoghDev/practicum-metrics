@@ -28,7 +28,6 @@ func TestReadMetrics(t *testing.T) {
 			defer cancel()
 
 			var wg sync.WaitGroup
-
 			go mp.ReadMetrics(ctx, metricsCh, time.Second, 1, &wg)
 
 			wg.Add(1)
@@ -43,4 +42,20 @@ func TestReadMetrics(t *testing.T) {
 			wg.Wait()
 		})
 	}
+}
+
+func BenchmarkReadMetrics(b *testing.B) {
+	logger, _ := zap.NewProduction()
+	mp := New(logger)
+	metricsCh := make(chan Result, 10)
+	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(ctx, time.Second*5)
+	defer cancel()
+
+	var wg sync.WaitGroup
+	b.ResetTimer()
+
+	b.Run("read metrics", func(b *testing.B) {
+		mp.ReadMetrics(ctx, metricsCh, time.Second, 1, &wg)
+	})
 }

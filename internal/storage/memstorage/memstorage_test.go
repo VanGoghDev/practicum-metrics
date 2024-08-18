@@ -2,7 +2,9 @@ package memstorage
 
 import (
 	"context"
+	"math/rand"
 	"testing"
+	"time"
 
 	"github.com/VanGoghDev/practicum-metrics/internal/server/logger"
 	"github.com/VanGoghDev/practicum-metrics/internal/storage/serrors"
@@ -281,4 +283,48 @@ func runTest(t *testing.T, tt *test) func(name string, f func(t *testing.T)) boo
 		assert.Equal(t, tt.want.err, err)
 		return assert.Equal(t, tt.want.err, err) && assert.Equal(t, tt.want.metricValue, s.GaugesM[tt.args.name])
 	}
+}
+
+func BenchmarkSaveGauge(b *testing.B) {
+	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(ctx, time.Second*3)
+	defer cancel()
+	type testMetric struct {
+		name  string
+		value float64
+	}
+
+	log, _ := logger.New("Info")
+	s, _ := New(log)
+	metrics := make([]*testMetric, 0, 100)
+
+	for i := range 100 {
+		_ = i
+		metric := &testMetric{
+			name:  randSeq(10),
+			value: 10,
+		}
+		metrics = append(metrics, metric)
+	}
+	b.ResetTimer()
+	for i := range metrics {
+		err := s.SaveGauge(ctx, metrics[i].name, metrics[i].value)
+		if err != nil {
+			log.Sugar().Errorf("%w: failed to save metric", err)
+		}
+	}
+}
+
+func init() {
+	rand.Seed(time.Now().UnixNano())
+}
+
+var letters = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
+
+func randSeq(n int) string {
+	b := make([]rune, n)
+	for i := range b {
+		b[i] = letters[rand.Intn(len(letters))]
+	}
+	return string(b)
 }
