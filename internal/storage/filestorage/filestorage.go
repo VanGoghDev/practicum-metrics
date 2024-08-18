@@ -73,6 +73,7 @@ func (f *FileStorage) SaveMetrics(ctx context.Context, metrics []*models.Metrics
 			continue
 		}
 	}
+
 	return nil
 }
 
