@@ -13,6 +13,7 @@ import (
 	"go.uber.org/zap"
 )
 
+// New возвращает новый экземпляр мидлвары подписи запросов.
 func New(zlog *zap.SugaredLogger, cfg *config.Config) func(next http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		fn := func(w http.ResponseWriter, r *http.Request) {

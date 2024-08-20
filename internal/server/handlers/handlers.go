@@ -1,6 +1,9 @@
 package handlers
 
 const (
-	Gauge   string = "gauge"
+	// Gauge тип метрик.
+	Gauge string = "gauge"
+
+	// Counter тип метрик.
 	Counter string = "counter"
 )

@@ -21,11 +21,13 @@ import (
 	"go.uber.org/zap"
 )
 
+// PgStorage хранилище метрик. В качестве хранилища выступает бд.
 type PgStorage struct {
 	zlog *zap.SugaredLogger
 	pool *pgxpool.Pool
 }
 
+// New возвращает новый экземпляр хранилища.
 func New(ctx context.Context, zlog *zap.SugaredLogger, cfg *config.Config) (*PgStorage, error) {
 	pool, err := pgxpool.New(ctx, cfg.DBConnectionString)
 	if err != nil {
@@ -76,6 +78,7 @@ func (s *PgStorage) runMigrations(dsn string) error {
 	return nil
 }
 
+// SaveMetrics сохраняет метрики.
 func (s *PgStorage) SaveMetrics(ctx context.Context, metrics []*models.Metrics) (err error) {
 	tx, err := s.pool.BeginTx(ctx, pgx.TxOptions{})
 	defer func() {
@@ -142,6 +145,7 @@ func (s *PgStorage) SaveMetrics(ctx context.Context, metrics []*models.Metrics) 
 	return nil
 }
 
+// SaveGauge сохраняет метрики типа Gauge.
 func (s *PgStorage) SaveGauge(ctx context.Context, name string, value float64) (err error) {
 	_, err = s.pool.Exec(ctx, "INSERT INTO metrics(name, g_type, g_value, delta) VALUES($1, $2, $3, $4)",
 		name, handlers.Gauge, value, 0)
@@ -151,6 +155,7 @@ func (s *PgStorage) SaveGauge(ctx context.Context, name string, value float64) (
 	return nil
 }
 
+// SaveCount сохраняет метрики типа Count.
 func (s *PgStorage) SaveCount(ctx context.Context, name string, value int64) (err error) {
 	_, err = s.pool.Exec(ctx, "INSERT INTO metrics(name, g_type, g_value, delta)"+
 		"VALUES($1, $2, $3, $4) ON CONFLICT(name) DO UPDATE SET delta = metrics.delta + EXCLUDED.delta",
@@ -161,6 +166,7 @@ func (s *PgStorage) SaveCount(ctx context.Context, name string, value int64) (er
 	return nil
 }
 
+// Gauges возвращает список метрик типа Gauge.
 func (s *PgStorage) Gauges(ctx context.Context) (gauges []models.Gauge, err error) {
 	rows, err := s.pool.Query(ctx, "SELECT name, g_value FROM metrics")
 	if err != nil {
@@ -183,6 +189,7 @@ func (s *PgStorage) Gauges(ctx context.Context) (gauges []models.Gauge, err erro
 	return gauges, nil
 }
 
+// Counters возвращает список метрик типа Counter.
 func (s *PgStorage) Counters(ctx context.Context) (counters []models.Counter, err error) {
 	rows, err := s.pool.Query(ctx, "SELECT name, delta FROM metrics")
 
@@ -206,6 +213,7 @@ func (s *PgStorage) Counters(ctx context.Context) (counters []models.Counter, er
 	return counters, nil
 }
 
+// Gauge Возвращает метрику типа Gauge.
 func (s *PgStorage) Gauge(ctx context.Context, name string) (gauge models.Gauge, err error) {
 	row := s.pool.QueryRow(ctx, "SELECT name, g_value FROM metrics WHERE name = $1", name)
 	err = row.Scan(&gauge.Name, &gauge.Value)
@@ -218,6 +226,7 @@ func (s *PgStorage) Gauge(ctx context.Context, name string) (gauge models.Gauge,
 	return gauge, nil
 }
 
+// Counter возвращает метрику типа Counter.
 func (s *PgStorage) Counter(ctx context.Context, name string) (counter models.Counter, err error) {
 	row := s.pool.QueryRow(ctx, "SELECT name, delta FROM metrics WHERE name = $1", name)
 	err = row.Scan(&counter.Name, &counter.Value)
@@ -230,6 +239,7 @@ func (s *PgStorage) Counter(ctx context.Context, name string) (counter models.Co
 	return counter, nil
 }
 
+// Ping пинг хранилища.
 func (s *PgStorage) Ping(ctx context.Context) error {
 	err := s.pool.Ping(ctx)
 	if err != nil {
@@ -238,6 +248,7 @@ func (s *PgStorage) Ping(ctx context.Context) error {
 	return nil
 }
 
+// Close закрывает соединение с хранилищем.
 func (s *PgStorage) Close(ctx context.Context) error {
 	s.pool.Close()
 	return nil

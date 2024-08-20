@@ -19,6 +19,7 @@ type SignerTripper struct {
 	key     string
 }
 
+// New возвращает новый экземпляр SignerTripper.
 func New(cfg *config.Config) *SignerTripper {
 	return &SignerTripper{
 		key: cfg.Key,
@@ -48,6 +49,7 @@ func (st *SignerTripper) SignBody(req *http.Request) (*http.Request, error) {
 	return req, nil
 }
 
+// RoundTrip подписывает запросы.
 func (st *SignerTripper) RoundTrip(req *http.Request) (*http.Response, error) {
 	req, err := st.SignBody(req)
 	if err != nil {

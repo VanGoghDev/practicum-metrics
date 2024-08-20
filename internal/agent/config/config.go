@@ -9,13 +9,25 @@ import (
 	"github.com/caarlos0/env"
 )
 
+// Config хранит параметры приложения.
 type Config struct {
-	Address        string        `env:"ADDRESS"`
-	Loglevel       string        `env:"LOGLVL"`
-	Key            string        `env:"KEY"`
-	RateLimit      int64         `env:"RATE_LIMIT"`
+	// Address адрес сервиса куда отправлять метрики.
+	Address string `env:"ADDRESS"`
+
+	// Loglevel уровень логирования (DEBUG/ERROR/...).
+	Loglevel string `env:"LOGLVL"`
+
+	// Key ключ подписи.
+	Key string `env:"KEY"`
+
+	// RateLimit кол-во горутин, которые будут отправлять запросы на сервер.
+	RateLimit int64 `env:"RATE_LIMIT"`
+
+	// ReportInterval интервал с которым происходит отправка метрик на сервер.
 	ReportInterval time.Duration `env:"REPORTINTERVAL"`
-	PollInterval   time.Duration `env:"POLLINTERVAL"`
+
+	// PollInterval интервал с которым происходит опрос метрик.
+	PollInterval time.Duration `env:"POLLINTERVAL"`
 }
 
 const (
@@ -23,6 +35,7 @@ const (
 	defaultPollInterval   int64 = 2
 )
 
+// Load инициализирует конфиг.
 func Load() (config *Config, err error) {
 	cfg := Config{}
 

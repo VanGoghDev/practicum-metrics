@@ -8,6 +8,7 @@ import (
 	"go.uber.org/zap"
 )
 
+// PingHandler пингует бд.
 func PingHandler(zlog *zap.SugaredLogger, cfg *config.Config, storage routers.Storage) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		err := storage.Ping(r.Context())

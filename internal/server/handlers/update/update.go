@@ -16,6 +16,7 @@ const (
 	internalErrMsg = "Internal error"
 )
 
+// UpdateHandler обработчик, сохраняющий метрики в хранилище.
 func UpdateHandler(zlog *zap.SugaredLogger, storage routers.Storage) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
@@ -69,6 +70,7 @@ func UpdateHandler(zlog *zap.SugaredLogger, storage routers.Storage) http.Handle
 	}
 }
 
+// UpdateHandlerRouteParams сохраняющий метрики в хранилище. Принимает параметры в url.
 func UpdateHandlerRouteParams(zlog *zap.SugaredLogger, storage routers.Storage) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/plain; charset=utf-8")

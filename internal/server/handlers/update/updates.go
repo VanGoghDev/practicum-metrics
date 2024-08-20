@@ -9,6 +9,7 @@ import (
 	"go.uber.org/zap"
 )
 
+// UpdatesHandler обработчик, сохраняющий метрики в хранилище. Принимает метрики батчами.
 func UpdatesHandler(zlog *zap.SugaredLogger, storage routers.Storage) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")

@@ -14,6 +14,7 @@ import (
 	"go.uber.org/zap"
 )
 
+// BuildRouter создает Router.
 func BuildRouter(s routers.Storage, log *zap.Logger, cfg *config.Config) chi.Router {
 	r := chi.NewRouter()
 	sugarlog := log.Sugar()

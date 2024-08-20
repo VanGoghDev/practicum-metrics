@@ -16,6 +16,7 @@ import (
 	"go.uber.org/zap"
 )
 
+// FileStorage хранилище метрик в файле ОС.
 type FileStorage struct {
 	memstorage.MemStorage
 	zlog    *zap.Logger
@@ -24,6 +25,7 @@ type FileStorage struct {
 	scanner *bufio.Scanner
 }
 
+// New возвращает новый экземпляр хранилища.
 func New(ctx context.Context, zlog *zap.Logger, cfg *config.Config) (*FileStorage, error) {
 	var perm fs.FileMode = 0o666
 	file, err := os.OpenFile(cfg.FileStoragePath, os.O_RDWR|os.O_CREATE, perm)
@@ -55,6 +57,7 @@ func New(ctx context.Context, zlog *zap.Logger, cfg *config.Config) (*FileStorag
 	return f, nil
 }
 
+// SaveMetrics сохраняет метрики.
 func (f *FileStorage) SaveMetrics(ctx context.Context, metrics []*models.Metrics) (err error) {
 	for _, v := range metrics {
 		switch v.MType {
@@ -77,6 +80,7 @@ func (f *FileStorage) SaveMetrics(ctx context.Context, metrics []*models.Metrics
 	return nil
 }
 
+// SaveGauge сохраняет метрики типа Gauge.
 func (f *FileStorage) SaveGauge(ctx context.Context, name string, value float64) (err error) {
 	if f.MemStorage.GaugesM == nil {
 		return serrors.ErrGaugesTableNil
@@ -99,6 +103,7 @@ func (f *FileStorage) SaveGauge(ctx context.Context, name string, value float64)
 	return f.SaveToFile(ctx, data)
 }
 
+// SaveCount сохраняет метрики типа Count.
 func (f *FileStorage) SaveCount(ctx context.Context, name string, value int64) (err error) {
 	if f.MemStorage.CountersM == nil {
 		return serrors.ErrCountersTableNil
@@ -121,6 +126,7 @@ func (f *FileStorage) SaveCount(ctx context.Context, name string, value int64) (
 	return f.SaveToFile(ctx, data)
 }
 
+// SaveToFile сохранение в файл.
 func (f *FileStorage) SaveToFile(ctx context.Context, data []byte) error {
 	_, err := f.writer.Write(data)
 
@@ -173,10 +179,12 @@ func (f *FileStorage) restore(ctx context.Context) error {
 	return nil
 }
 
+// Ping пинг хранилища.
 func (f *FileStorage) Ping(ctx context.Context) error {
 	return nil
 }
 
+// Close закрывает соединение с хранилищем.
 func (f *FileStorage) Close(ctx context.Context) error {
 	if err := f.file.Close(); err != nil {
 		return fmt.Errorf("Filestorage.Close: %w", err)

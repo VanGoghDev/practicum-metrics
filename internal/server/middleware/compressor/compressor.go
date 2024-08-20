@@ -16,6 +16,7 @@ type CompressWriter struct {
 	zw *gzip.Writer
 }
 
+// NewCompressWriter возвращает новый экземпляр CompressWriter.
 func NewCompressWriter(w http.ResponseWriter) CompressWriter {
 	return CompressWriter{
 		ResponseWriter: w,
@@ -23,6 +24,7 @@ func NewCompressWriter(w http.ResponseWriter) CompressWriter {
 	}
 }
 
+// Write сжимает переданный массив байт.
 func (cw CompressWriter) Write(data []byte) (int, error) {
 	code, err := cw.zw.Write(data)
 	if err != nil {
@@ -40,11 +42,13 @@ func (cw *CompressWriter) Close() error {
 	return nil
 }
 
+// CompressReader умеет читать сжатые запросы.
 type CompressReader struct {
 	r  io.ReadCloser
 	zr *gzip.Reader
 }
 
+// NewCompressReader возвращает новый экземпляр CompressReader.
 func NewCompressReader(r io.ReadCloser) (*CompressReader, error) {
 	zr, err := gzip.NewReader(r)
 	if err != nil {
@@ -65,6 +69,7 @@ func (c *CompressReader) Read(p []byte) (n int, err error) {
 	return code, nil
 }
 
+// Close закрывает читателя.
 func (c *CompressReader) Close() error {
 	err := c.r.Close()
 	if err != nil {
@@ -73,6 +78,7 @@ func (c *CompressReader) Close() error {
 	return nil
 }
 
+// CloseGzRReader закрывает zr.
 func (c *CompressReader) CloseGzRReader() error {
 	err := c.zr.Close()
 	if err != nil {
@@ -81,6 +87,7 @@ func (c *CompressReader) CloseGzRReader() error {
 	return nil
 }
 
+// New возвращает новый экземпляр хэндлера.
 func New(zlog *zap.SugaredLogger) func(next http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		fn := func(w http.ResponseWriter, r *http.Request) {

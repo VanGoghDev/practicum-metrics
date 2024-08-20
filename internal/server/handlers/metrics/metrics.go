@@ -25,6 +25,7 @@ const (
 	notFoundErrMsg = "Not found"
 )
 
+// MetricsHandler обработчик, возвращающий метрики.
 func MetricsHandler(zlog *zap.SugaredLogger, s routers.Storage) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
@@ -77,6 +78,7 @@ func MetricsHandler(zlog *zap.SugaredLogger, s routers.Storage) http.HandlerFunc
 	}
 }
 
+// MetricHandler обработчик, возвращающий метрики в формате json.
 func MetricHandler(zlog *zap.SugaredLogger, s routers.Storage) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
@@ -144,6 +146,7 @@ func MetricHandler(zlog *zap.SugaredLogger, s routers.Storage) http.HandlerFunc 
 	}
 }
 
+// MetricHandlerRouterParams обработчик, возвращающий метрики. Принимает параметры в url.
 func MetricHandlerRouterParams(zlog *zap.SugaredLogger, s routers.Storage) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/plain; charset=utf-8")

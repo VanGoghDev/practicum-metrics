@@ -10,20 +10,35 @@ import (
 	"github.com/caarlos0/env"
 )
 
+// Config хранит параметры приложения.
 type Config struct {
-	Address            string `env:"ADDRESS"`
-	Loglevel           string `env:"LOGLVL"`
-	FileStoragePath    string `env:"FILE_STORAGE_PATH"`
+	// Address адрес на котором запускается приложение.
+	Address string `env:"ADDRESS"`
+
+	// Loglevel уровень логирования (DEBUG/ERROR/...).
+	Loglevel string `env:"LOGLVL"`
+
+	// FileStoragePath путь до хранения данных в файле.
+	FileStoragePath string `env:"FILE_STORAGE_PATH"`
+
+	// DbConnectionString строка подключения к бд.
 	DBConnectionString string `env:"DATABASE_DSN"`
-	Key                string `env:"KEY"`
-	Restore            bool   `env:"RESTORE"`
-	StoreInterval      time.Duration
+
+	// Key ключ для шифрования запросов.
+	Key string `env:"KEY"`
+
+	// Restore флаг того что нужно восстанавливать данные из файла или нет.
+	Restore bool `env:"RESTORE"`
+
+	// StoreInterval интервал с которым сохраняются данные в файловое хранилище.
+	StoreInterval time.Duration
 }
 
 const (
 	defaultStoreInterval int64 = 300
 )
 
+// Load инициализирует конфиг.
 func Load() (config *Config, err error) {
 	cfg := Config{}
 	if err := env.Parse(&cfg); err != nil {

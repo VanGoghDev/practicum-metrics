@@ -14,20 +14,27 @@ import (
 	"go.uber.org/zap"
 )
 
+// HTTPClient интерфейс для работы с http клиентом.
 type HTTPClient interface {
 	Do(req *http.Request) (*http.Response, error)
 }
 
+// Result простая структура, которая пишет ошибку в канал,
+// чтобы отлавливать ошибки.
 type Result struct {
 	Error error
 }
 
+// ServerConsumer сервис, который принимает метрики.
 type ServerConsumer struct {
-	zlog   *zap.Logger
+	zlog *zap.Logger
+
+	// HTTPClient клиент http.
 	Client HTTPClient
 	url    string
 }
 
+// New возвращается новый экземпляр ServerConsumer.
 func New(zlog *zap.Logger, client HTTPClient, url string) *ServerConsumer {
 	return &ServerConsumer{
 		zlog:   zlog,
@@ -36,6 +43,7 @@ func New(zlog *zap.Logger, client HTTPClient, url string) *ServerConsumer {
 	}
 }
 
+// SendMetrics отправка метрик.
 func (s *ServerConsumer) SendMetrics(
 	ctx context.Context,
 	metricsCh <-chan metrics.Result,

@@ -21,6 +21,7 @@ type AgentTripper struct {
 	useCompression, useSigning bool
 }
 
+// New возвращает новый экземпляр AgentTripper.
 func New(cfg *config.Config, proxy http.RoundTripper) *AgentTripper {
 	var useSigning bool
 	if cfg.Key != "" {
@@ -35,6 +36,7 @@ func New(cfg *config.Config, proxy http.RoundTripper) *AgentTripper {
 	}
 }
 
+// RoundTrip сжимает запросы и подписывает их через SignerTripper.
 func (a *AgentTripper) RoundTrip(req *http.Request) (*http.Response, error) {
 	var err error
 

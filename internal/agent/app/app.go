@@ -1,3 +1,4 @@
+// Приложения по сбору и отправки метрик на сервер.
 package app
 
 import (
@@ -16,11 +17,17 @@ import (
 )
 
 var (
+	// ErrConsumerServiceNil ошибка, что сервис по отправке не инициализирован.
 	ErrConsumerServiceNil = errors.New("consumer is not initialized")
+
+	// ErrMetricsProviderNil ошибка, что сервис по чтению метрик не инициализирован.
 	ErrMetricsProviderNil = errors.New("metrics provider is not initialized")
 )
 
+// MetricsProvider интерфейс, предоставляющий API к сервису чтения метрик.
 type MetricsProvider interface {
+	// ReadMetrics записывает метрики в metricsCh, опрос метрик происходит по таймауту,
+	// определенному в pollInterval.
 	ReadMetrics(
 		ctx context.Context,
 		metricsCh chan<- metrics.Result,
@@ -30,7 +37,9 @@ type MetricsProvider interface {
 	)
 }
 
+// Sender контракт, которому должен соответствовать сервис отправки метрик.
 type Sender interface {
+	// SendMetrics отправляет метрики в resultCh, отправка метрик происходит по таймауту reportInterval.
 	SendMetrics(
 		ctx context.Context,
 		metricsCh <-chan metrics.Result,
@@ -40,9 +49,14 @@ type Sender interface {
 	)
 }
 
+// App ядро приложения. Инкапсулирует в себе сервисы чтения, отправки метрик.
 type App struct {
-	Log             *zap.Logger
-	Sender          Sender
+	// Log Логгер
+	Log *zap.Logger
+	// Sender Сервис отправки метрик.
+	Sender Sender
+
+	// MetricsProvider Сервис
 	MetricsProvider MetricsProvider
 
 	rateLimit      int64
@@ -50,6 +64,7 @@ type App struct {
 	pollInterval   time.Duration
 }
 
+// New возвращает новый экземпляр приложения.
 func New(log *zap.Logger, cfg *config.Config) *App {
 	metricsService := metrics.New(log)
 	aTripper := transport.New(cfg, http.DefaultTransport)
@@ -70,6 +85,7 @@ func New(log *zap.Logger, cfg *config.Config) *App {
 	}
 }
 
+// RunApp запускает приложение.
 func (a *App) RunApp() error {
 	if err := a.Run(); err != nil {
 		return fmt.Errorf("failed to run app %w", err)
@@ -77,6 +93,7 @@ func (a *App) RunApp() error {
 	return nil
 }
 
+// Run запускает приложение.
 func (a *App) Run() error {
 	const op = "app.Run"
 	if a.Sender == nil {
