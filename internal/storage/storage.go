@@ -3,10 +3,13 @@ package storage
 import (
 	"context"
 	"fmt"
+	"io/fs"
+	"os"
 
 	"github.com/VanGoghDev/practicum-metrics/internal/domain/models"
 	"github.com/VanGoghDev/practicum-metrics/internal/server/config"
 	"github.com/VanGoghDev/practicum-metrics/internal/storage/filestorage"
+	"github.com/VanGoghDev/practicum-metrics/internal/storage/filestorage/filewriter"
 	"github.com/VanGoghDev/practicum-metrics/internal/storage/memstorage"
 	"github.com/VanGoghDev/practicum-metrics/internal/storage/pgstorage"
 	"go.uber.org/zap"
@@ -63,7 +66,23 @@ func New(ctx context.Context, cfg *config.Config, zlog *zap.Logger) (Storage, er
 		return s, nil
 	}
 	zlog.Debug("Init file storage")
-	s, err := filestorage.New(ctx, zlog, cfg)
+
+	memstrg, err := memstorage.New(zlog)
+	if err != nil {
+		return nil, fmt.Errorf("failed to init memory storage: %w", err)
+	}
+
+	var perm fs.FileMode = 0o666
+	file, err := os.OpenFile(cfg.FileStoragePath, os.O_RDWR|os.O_CREATE, perm)
+	if err != nil {
+		return nil, fmt.Errorf("%w: failed to open file", err)
+	}
+	fwriter, err := filewriter.New(file, perm)
+	if err != nil {
+		return nil, fmt.Errorf("%w: failed to init file writer", err)
+	}
+
+	s, err = filestorage.New(ctx, zlog, cfg.Restore, fwriter, memstrg)
 	if err != nil {
 		return nil, fmt.Errorf("failed to init file storage: %w", err)
 	}
