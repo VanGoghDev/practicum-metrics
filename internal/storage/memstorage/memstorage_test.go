@@ -6,9 +6,12 @@ import (
 	"testing"
 	"time"
 
+	"github.com/VanGoghDev/practicum-metrics/internal/domain/models"
+	"github.com/VanGoghDev/practicum-metrics/internal/server/handlers"
 	"github.com/VanGoghDev/practicum-metrics/internal/server/logger"
 	"github.com/VanGoghDev/practicum-metrics/internal/storage/serrors"
 	"github.com/stretchr/testify/assert"
+	"go.uber.org/zap"
 )
 
 type fields struct {
@@ -324,4 +327,306 @@ func randSeq(n int) string {
 		b[i] = letters[r.Intn(len(letters))]
 	}
 	return string(b)
+}
+
+func TestMemStorage_Gauges(t *testing.T) {
+	type fields struct {
+		zlog      *zap.Logger
+		GaugesM   map[string]float64
+		CountersM map[string]int64
+	}
+	tests := []struct {
+		name       string
+		fields     fields
+		args       args
+		wantGauges []models.Gauge
+		wantErr    bool
+	}{
+		{
+			name: "gauegesM is nil, should return error",
+			fields: fields{
+				GaugesM: nil,
+			},
+			wantErr: true,
+		},
+		{
+			name: "gauegesM is ok, should return slice of metrics",
+			fields: fields{
+				GaugesM: map[string]float64{
+					"test": 3.14,
+				},
+			},
+			wantErr: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctx := context.Background()
+			s := &MemStorage{
+				zlog:      tt.fields.zlog,
+				GaugesM:   tt.fields.GaugesM,
+				CountersM: tt.fields.CountersM,
+			}
+			gotGauges, err := s.Gauges(ctx)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("MemStorage.Gauges() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if tt.wantErr {
+				assert.NotNil(t, err)
+				return
+			}
+
+			assert.NotNil(t, gotGauges)
+		})
+	}
+}
+
+func TestMemStorage_Counter(t *testing.T) {
+	type fields struct {
+		zlog      *zap.Logger
+		GaugesM   map[string]float64
+		CountersM map[string]int64
+	}
+	tests := []struct {
+		name       string
+		fields     fields
+		args       args
+		wantGauges []models.Gauge
+		wantErr    bool
+	}{
+		{
+			name: "gauegesM is nil, should return error",
+			fields: fields{
+				CountersM: nil,
+			},
+			wantErr: true,
+		},
+		{
+			name: "gauegesM is ok, should return slice of metrics",
+			fields: fields{
+				CountersM: map[string]int64{
+					"test": 3,
+				},
+			},
+			wantErr: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctx := context.Background()
+			s := &MemStorage{
+				zlog:      tt.fields.zlog,
+				GaugesM:   tt.fields.GaugesM,
+				CountersM: tt.fields.CountersM,
+			}
+			gotGauges, err := s.Counters(ctx)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("MemStorage.Gauges() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if tt.wantErr {
+				assert.NotNil(t, err)
+				return
+			}
+
+			assert.NotNil(t, gotGauges)
+		})
+	}
+}
+
+func TestMemStorage_GetMetrics(t *testing.T) {
+	type fields struct {
+		zlog      *zap.Logger
+		GaugesM   map[string]float64
+		CountersM map[string]int64
+	}
+	type args struct {
+	}
+	tests := []struct {
+		name      string
+		fields    fields
+		args      args
+		want      []*models.Metrics
+		wantCount int
+		wantErr   bool
+	}{
+		{
+			name: "gauegesM is ok, should return slice of metrics",
+			fields: fields{
+				CountersM: map[string]int64{
+					"test": 3,
+				},
+				GaugesM: map[string]float64{
+					"test2": 4,
+				},
+			},
+			wantCount: 2,
+			wantErr:   false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctx := context.Background()
+			s := &MemStorage{
+				zlog:      tt.fields.zlog,
+				GaugesM:   tt.fields.GaugesM,
+				CountersM: tt.fields.CountersM,
+			}
+			got, err := s.GetMetrics(ctx)
+
+			if tt.wantErr {
+				assert.NotNil(t, err)
+				return
+			}
+
+			assert.Equal(t, len(got), tt.wantCount)
+		})
+	}
+}
+
+func TestMemStorage_SaveMetrics(t *testing.T) {
+	type fields struct {
+		zlog      *zap.Logger
+		GaugesM   map[string]float64
+		CountersM map[string]int64
+	}
+	type args struct {
+		metrics []*models.Metrics
+	}
+	tests := []struct {
+		name    string
+		fields  fields
+		args    args
+		wantErr bool
+	}{
+		{
+			name: "mem storage ok, returns result",
+			fields: fields{
+				CountersM: map[string]int64{
+					"test": 3,
+				},
+				GaugesM: map[string]float64{
+					"test2": 4,
+				},
+			},
+			args: args{
+				metrics: []*models.Metrics{
+					{
+						MType: "gauge",
+						ID:    "test",
+					},
+					{
+						MType: "counter",
+						ID:    "test",
+					},
+				},
+			},
+		},
+		{
+			name: "CountersM nil, returns error",
+			fields: fields{
+				CountersM: nil,
+				GaugesM: map[string]float64{
+					"test2": 4,
+				},
+			},
+			args: args{
+				metrics: []*models.Metrics{
+					{
+						MType: "gauge",
+						ID:    "test",
+					},
+					{
+						MType: "counter",
+						ID:    "test",
+					},
+				},
+			},
+			wantErr: true,
+		},
+		{
+			name: "GaugesM nil, returns error",
+			fields: fields{
+				CountersM: map[string]int64{
+					"test": 3,
+				},
+				GaugesM: nil,
+			},
+			args: args{
+				metrics: []*models.Metrics{
+					{
+						MType: "gauge",
+						ID:    "test",
+					},
+					{
+						MType: "counter",
+						ID:    "test",
+					},
+				},
+			},
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			s := &MemStorage{
+				zlog:      tt.fields.zlog,
+				GaugesM:   tt.fields.GaugesM,
+				CountersM: tt.fields.CountersM,
+			}
+			for _, v := range tt.args.metrics {
+				switch v.MType {
+				case handlers.Counter:
+					pollCount := int64(3)
+					v.Delta = &pollCount
+				case handlers.Gauge:
+					val := float64(13.4)
+					v.Value = &val
+				}
+			}
+			ctx := context.Background()
+			if err := s.SaveMetrics(ctx, tt.args.metrics); (err != nil) != tt.wantErr {
+				t.Errorf("MemStorage.SaveMetrics() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+func TestMemStorage_Ping(t *testing.T) {
+	tests := []struct {
+		name    string
+		wantErr bool
+	}{
+		{
+			name: "ping",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			s := &MemStorage{}
+			ctx := context.Background()
+			if err := s.Ping(ctx); (err != nil) != tt.wantErr {
+				t.Errorf("MemStorage.Ping() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+func TestMemStorage_Close(t *testing.T) {
+	tests := []struct {
+		name    string
+		wantErr bool
+	}{
+		{name: "close"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			s := &MemStorage{}
+			ctx := context.Background()
+			if err := s.Close(ctx); (err != nil) != tt.wantErr {
+				t.Errorf("MemStorage.Ping() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
 }
