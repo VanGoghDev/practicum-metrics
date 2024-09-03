@@ -10,9 +10,11 @@ import (
 	"github.com/VanGoghDev/practicum-metrics/internal/server/middleware/signature"
 	"github.com/VanGoghDev/practicum-metrics/internal/server/routers"
 	"github.com/go-chi/chi"
+	"github.com/go-chi/chi/middleware"
 	"go.uber.org/zap"
 )
 
+// BuildRouter создает Router.
 func BuildRouter(s routers.Storage, log *zap.Logger, cfg *config.Config) chi.Router {
 	r := chi.NewRouter()
 	sugarlog := log.Sugar()
@@ -41,6 +43,7 @@ func BuildRouter(s routers.Storage, log *zap.Logger, cfg *config.Config) chi.Rou
 	r.Route("/ping", func(r chi.Router) {
 		r.Get("/", ping.PingHandler(sugarlog, cfg, s))
 	})
+	r.Mount("/debug", middleware.Profiler())
 
 	return r
 }

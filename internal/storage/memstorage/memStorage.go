@@ -9,22 +9,29 @@ import (
 	"go.uber.org/zap"
 )
 
+const (
+	initMapSize = 100
+)
+
+// MemStorage хранилище метрик. В качестве хранилища выступает мапа.
 type MemStorage struct {
 	zlog      *zap.Logger
 	GaugesM   map[string]float64
 	CountersM map[string]int64
 }
 
+// New возвращает новый экземпляр хранилища.
 func New(zlog *zap.Logger) (*MemStorage, error) {
 	s := &MemStorage{
 		zlog:      zlog,
-		GaugesM:   make(map[string]float64),
-		CountersM: make(map[string]int64),
+		GaugesM:   make(map[string]float64, initMapSize),
+		CountersM: make(map[string]int64, initMapSize),
 	}
 
 	return s, nil
 }
 
+// SaveGauge сохраняет метрики типа Gauge.
 func (s *MemStorage) SaveGauge(ctx context.Context, name string, value float64) (err error) {
 	if s == nil || s.GaugesM == nil {
 		return serrors.ErrGaugesTableNil
@@ -34,6 +41,7 @@ func (s *MemStorage) SaveGauge(ctx context.Context, name string, value float64) 
 	return nil
 }
 
+// SaveCount сохраняет метрики типа Count.
 func (s *MemStorage) SaveCount(ctx context.Context, name string, value int64) (err error) {
 	if s == nil || s.CountersM == nil {
 		return serrors.ErrCountersTableNil
@@ -43,6 +51,7 @@ func (s *MemStorage) SaveCount(ctx context.Context, name string, value int64) (e
 	return nil
 }
 
+// Gauges возвращает список метрик типа Gauge.
 func (s *MemStorage) Gauges(ctx context.Context) (gauges []models.Gauge, err error) {
 	if s == nil || s.GaugesM == nil {
 		return nil, serrors.ErrGaugesTableNil
@@ -57,6 +66,7 @@ func (s *MemStorage) Gauges(ctx context.Context) (gauges []models.Gauge, err err
 	return gauges, err
 }
 
+// Counters возвращает список метрик типа Counters.
 func (s *MemStorage) Counters(ctx context.Context) (counters []models.Counter, err error) {
 	if s == nil || s.CountersM == nil {
 		return nil, serrors.ErrCountersTableNil
@@ -72,6 +82,7 @@ func (s *MemStorage) Counters(ctx context.Context) (counters []models.Counter, e
 	return counters, err
 }
 
+// Gauge возвращает метрику типа Gauge.
 func (s *MemStorage) Gauge(ctx context.Context, name string) (gauge models.Gauge, err error) {
 	if s == nil || s.GaugesM == nil {
 		return models.Gauge{}, serrors.ErrCountersTableNil
@@ -91,6 +102,7 @@ func (s *MemStorage) Gauge(ctx context.Context, name string) (gauge models.Gauge
 	}
 }
 
+// Counter возвращает метрику типа Counter.
 func (s *MemStorage) Counter(ctx context.Context, name string) (counter models.Counter, err error) {
 	if s == nil || s.CountersM == nil {
 		return models.Counter{}, serrors.ErrCountersTableNil
@@ -111,6 +123,7 @@ func (s *MemStorage) Counter(ctx context.Context, name string) (counter models.C
 	}
 }
 
+// GetMetrics получает список метрик.
 func (s *MemStorage) GetMetrics(ctx context.Context) ([]*models.Metrics, error) {
 	metrics := make([]*models.Metrics, 0)
 	for k, v := range s.CountersM {
@@ -132,6 +145,7 @@ func (s *MemStorage) GetMetrics(ctx context.Context) ([]*models.Metrics, error) 
 	return metrics, nil
 }
 
+// SaveMetrics сохраняет метрики.
 func (s *MemStorage) SaveMetrics(ctx context.Context, metrics []*models.Metrics) (err error) {
 	for _, v := range metrics {
 		switch v.MType {
@@ -150,10 +164,12 @@ func (s *MemStorage) SaveMetrics(ctx context.Context, metrics []*models.Metrics)
 	return nil
 }
 
+// Ping пинг хранилища.
 func (s *MemStorage) Ping(ctx context.Context) error {
 	return nil
 }
 
+// Close закрывает соединение с хранилищем.
 func (s *MemStorage) Close(ctx context.Context) error {
 	return nil
 }

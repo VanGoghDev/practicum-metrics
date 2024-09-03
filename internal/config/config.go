@@ -29,9 +29,13 @@ type Config struct {
 	StoreInterval time.Duration
 }
 
-const (
-	defaultStoreInterval int64 = 300
-)
+type EnvironmentReader interface {
+	ReadEnvironment(cfg *Config) error
+}
+
+type FlagsReader interface {
+	ReadFlags(cfg *Config) error
+}
 
 // Load инициализирует конфиг.
 func Load(envReader EnvironmentReader, flagsReader FlagsReader) (config *Config, err error) {

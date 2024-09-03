@@ -8,6 +8,7 @@ import (
 	"net/http"
 )
 
+// CompressionTripper сжимает запросы.
 type CompressionTripper struct {
 	Proxied http.RoundTripper
 }
@@ -45,6 +46,7 @@ func (ct *CompressionTripper) CompressBody(req *http.Request) (*http.Request, er
 	return req, nil
 }
 
+// RoundTrip сжимает запросы.
 func (ct *CompressionTripper) RoundTrip(req *http.Request) (*http.Response, error) {
 	req, err := ct.CompressBody(req)
 	if err != nil {

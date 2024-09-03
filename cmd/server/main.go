@@ -20,7 +20,7 @@ func main() {
 
 func run(ctx context.Context) error {
 	// config
-	cfg, err := config.Load()
+	cfg, err := config.Load(&config.EnvReader{}, &config.FlagReader{})
 	if err != nil {
 		return fmt.Errorf("failed to load config %w", err)
 	}

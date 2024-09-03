@@ -1,3 +1,9 @@
 # internal
 
-В данной директории и её поддиректориях будет содержаться имплементация вашего сервиса
+Вычисление процента покрытия тестами:
+
+```go
+go test -v -coverpkg=./... -coverprofile=profile.cov ./...
+grep -v "mocks" profile.cov > cover.out
+go tool cover -func cover.out
+```

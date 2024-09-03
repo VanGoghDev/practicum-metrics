@@ -1,6 +1,9 @@
 package models
 
+// Counter метрика типа Counter.
 type Counter struct {
-	Name  string
+	// Name название метрики.
+	Name string
+	// Value значение метрики.
 	Value int64
 }

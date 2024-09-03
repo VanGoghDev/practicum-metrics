@@ -5,8 +5,10 @@ import (
 	"strconv"
 )
 
+// ErrUnsupportedType ошибка означает, что переданный тип не поддерживается конвертером.
 var ErrUnsupportedType = errors.New("type is unsupported")
 
+// Str возвращает строковое отображение для переданного аргумента v.
 func Str(v any) (string, error) {
 	var result string
 	switch v := v.(type) {

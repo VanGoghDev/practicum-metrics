@@ -18,16 +18,22 @@ const (
 	counterType = "counter"
 )
 
+// Result структура, которая пишет метрики в канал. Содержит ошибку и сами метрики.
 type Result struct {
-	Err     error
+	// Err ошибка.
+	Err error
+
+	// Metrics метрики.
 	Metrics []*models.Metrics
 }
 
+// MetricsProvider объект провайдера.
 type MetricsProvider struct {
 	log     *zap.Logger
 	metrics []*models.Metrics
 }
 
+// New возвращает новый экземпляр провайдера метрик.
 func New(log *zap.Logger) *MetricsProvider {
 	metrics := []*models.Metrics{
 		createMetric("Alloc", gaugeType),
@@ -70,6 +76,8 @@ func New(log *zap.Logger) *MetricsProvider {
 	}
 }
 
+// ReadMetrics записывает метрики в metricsCh, опрос метрик происходит по таймауту,
+// определенному в pollInterval.
 func (mp *MetricsProvider) ReadMetrics(
 	ctx context.Context,
 	metricsCh chan<- Result,

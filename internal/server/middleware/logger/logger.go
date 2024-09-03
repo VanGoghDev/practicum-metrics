@@ -8,6 +8,7 @@ import (
 	"go.uber.org/zap"
 )
 
+// New возвращает новый логгер.
 func New(zlog *zap.SugaredLogger) func(next http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		fn := func(w http.ResponseWriter, r *http.Request) {
