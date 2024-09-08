@@ -1,0 +1,27 @@
+mode: set
+github.com/VanGoghDev/practicum-metrics/cmd/staticlint/main.go:127.13,141.42 3 0
+github.com/VanGoghDev/practicum-metrics/cmd/staticlint/main.go:141.42,143.3 1 0
+github.com/VanGoghDev/practicum-metrics/cmd/staticlint/main.go:145.2,145.42 1 0
+github.com/VanGoghDev/practicum-metrics/cmd/staticlint/main.go:145.42,146.33 1 0
+github.com/VanGoghDev/practicum-metrics/cmd/staticlint/main.go:146.33,148.4 1 0
+github.com/VanGoghDev/practicum-metrics/cmd/staticlint/main.go:151.2,153.3 1 0
+github.com/VanGoghDev/practicum-metrics/cmd/staticlint/main.go:127.13,141.42 3 0
+github.com/VanGoghDev/practicum-metrics/cmd/staticlint/main.go:141.42,143.3 1 0
+github.com/VanGoghDev/practicum-metrics/cmd/staticlint/main.go:145.2,145.42 1 0
+github.com/VanGoghDev/practicum-metrics/cmd/staticlint/main.go:145.42,146.33 1 0
+github.com/VanGoghDev/practicum-metrics/cmd/staticlint/main.go:146.33,148.4 1 0
+github.com/VanGoghDev/practicum-metrics/cmd/staticlint/main.go:151.2,153.3 1 0
+github.com/VanGoghDev/practicum-metrics/cmd/staticlint/osexitcheck/osexitcheck.go:17.52,18.34 1 1
+github.com/VanGoghDev/practicum-metrics/cmd/staticlint/osexitcheck/osexitcheck.go:18.34,19.46 1 1
+github.com/VanGoghDev/practicum-metrics/cmd/staticlint/osexitcheck/osexitcheck.go:19.46,20.28 1 1
+github.com/VanGoghDev/practicum-metrics/cmd/staticlint/osexitcheck/osexitcheck.go:21.23,22.30 1 1
+github.com/VanGoghDev/practicum-metrics/cmd/staticlint/osexitcheck/osexitcheck.go:22.30,24.6 1 0
+github.com/VanGoghDev/practicum-metrics/cmd/staticlint/osexitcheck/osexitcheck.go:25.5,25.17 1 1
+github.com/VanGoghDev/practicum-metrics/cmd/staticlint/osexitcheck/osexitcheck.go:26.23,27.44 1 0
+github.com/VanGoghDev/practicum-metrics/cmd/staticlint/osexitcheck/osexitcheck.go:27.44,28.47 1 0
+github.com/VanGoghDev/practicum-metrics/cmd/staticlint/osexitcheck/osexitcheck.go:28.47,30.7 1 0
+github.com/VanGoghDev/practicum-metrics/cmd/staticlint/osexitcheck/osexitcheck.go:32.5,32.16 1 0
+github.com/VanGoghDev/practicum-metrics/cmd/staticlint/osexitcheck/osexitcheck.go:33.12,34.16 1 1
+github.com/VanGoghDev/practicum-metrics/cmd/staticlint/osexitcheck/osexitcheck.go:39.2,39.17 1 1
+github.com/VanGoghDev/practicum-metrics/cmd/staticlint/osexitcheck/osexitcheck.go:42.58,45.2 2 0
+github.com/VanGoghDev/practicum-metrics/cmd/staticlint/osexitcheck/osexitcheck.go:47.48,50.2 2 0
