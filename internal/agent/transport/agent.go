@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/VanGoghDev/practicum-metrics/internal/agent/config"
 	"github.com/VanGoghDev/practicum-metrics/internal/agent/transport/compressor"
 	"github.com/VanGoghDev/practicum-metrics/internal/agent/transport/signer"
 )
@@ -22,14 +21,9 @@ type AgentTripper struct {
 }
 
 // New возвращает новый экземпляр AgentTripper.
-func New(cfg *config.Config, proxy http.RoundTripper) *AgentTripper {
-	var useSigning bool
-	if cfg.Key != "" {
-		useSigning = true
-	}
-	sgnr := signer.New(cfg)
+func New(useSigning bool, proxy http.RoundTripper, sgnr signer.SignerTripper) *AgentTripper {
 	return &AgentTripper{
-		SignerTripper:  *sgnr,
+		SignerTripper:  sgnr,
 		useCompression: true,
 		useSigning:     useSigning,
 		Proxied:        proxy,

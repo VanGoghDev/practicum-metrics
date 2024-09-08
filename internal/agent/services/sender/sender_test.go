@@ -14,6 +14,7 @@ import (
 	"github.com/VanGoghDev/practicum-metrics/internal/agent/services/sender"
 	"github.com/VanGoghDev/practicum-metrics/internal/domain/models"
 	"github.com/stretchr/testify/assert"
+	"go.uber.org/zap"
 )
 
 type args struct {
@@ -131,6 +132,33 @@ func TestSendGauge(t *testing.T) {
 				return
 			}
 			wg.Wait()
+		})
+	}
+}
+
+func TestNew(t *testing.T) {
+	type args struct {
+		client sender.HTTPClient
+		url    string
+	}
+	tests := []struct {
+		name string
+		args args
+		want *sender.ServerConsumer
+	}{
+		{
+			name: "create new sender",
+			args: args{
+				client: &http.Client{},
+				url:    "http://example.com/foo",
+			},
+		},
+	}
+	for _, tt := range tests {
+		zlog, _ := zap.NewDevelopment()
+		t.Run(tt.name, func(t *testing.T) {
+			got := sender.New(zlog, tt.args.client, tt.args.url)
+			assert.NotNil(t, got)
 		})
 	}
 }
