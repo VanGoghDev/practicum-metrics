@@ -122,8 +122,10 @@ import (
 	"honnef.co/go/tools/staticcheck"
 )
 
+const analyzerCount = 100
+
 func main() {
-	mychecks := make([]*analysis.Analyzer, 0, 5)
+	mychecks := make([]*analysis.Analyzer, 0, analyzerCount)
 
 	// добавим стандартные проверки из analysis
 	mychecks = append(
