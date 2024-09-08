@@ -13,6 +13,7 @@ import (
 	"github.com/VanGoghDev/practicum-metrics/internal/agent/services/metrics"
 	"github.com/VanGoghDev/practicum-metrics/internal/agent/services/sender"
 	"github.com/VanGoghDev/practicum-metrics/internal/agent/transport"
+	"github.com/VanGoghDev/practicum-metrics/internal/agent/transport/signer"
 	"go.uber.org/zap"
 )
 
@@ -67,7 +68,12 @@ type App struct {
 // New возвращает новый экземпляр приложения.
 func New(log *zap.Logger, cfg *config.Config) *App {
 	metricsService := metrics.New(log)
-	aTripper := transport.New(cfg, http.DefaultTransport)
+	sgnr := signer.New(cfg.Key)
+	var useSigning bool
+	if cfg.Key != "" {
+		useSigning = true
+	}
+	aTripper := transport.New(useSigning, http.DefaultTransport, *sgnr)
 	sndr := sender.New(
 		log,
 		&http.Client{

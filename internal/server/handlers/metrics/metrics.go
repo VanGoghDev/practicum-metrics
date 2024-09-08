@@ -160,11 +160,6 @@ func MetricHandlerRouterParams(zlog *zap.SugaredLogger, s routers.Storage) http.
 			return
 		}
 
-		if mName == "" {
-			http.Error(w, "Invalid metric name", http.StatusNotFound)
-			return
-		}
-
 		switch mType {
 		case handlers.Counter:
 			{

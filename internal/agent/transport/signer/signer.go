@@ -9,8 +9,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-
-	"github.com/VanGoghDev/practicum-metrics/internal/agent/config"
 )
 
 // SignerTripper Подписывает запросы алгоритмом sha256.
@@ -20,9 +18,9 @@ type SignerTripper struct {
 }
 
 // New возвращает новый экземпляр SignerTripper.
-func New(cfg *config.Config) *SignerTripper {
+func New(key string) *SignerTripper {
 	return &SignerTripper{
-		key: cfg.Key,
+		key: key,
 	}
 }
 

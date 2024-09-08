@@ -7,6 +7,7 @@ import (
 	"encoding/base64"
 	"io"
 	"net/http"
+	"net/http/httptest"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -62,6 +63,36 @@ func TestSignerTripper_SignBody(t *testing.T) {
 			should, _ := base64.StdEncoding.DecodeString(hV)
 			assert.NotEmpty(t, hV)
 			assert.True(t, hmac.Equal(sign, should))
+		})
+	}
+}
+
+func TestCompressionTripper_RoundTrip(t *testing.T) {
+	tests := []struct {
+		name    string
+		want    *http.Response
+		wantErr bool
+	}{
+		{
+			name: "sign body",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			st := &SignerTripper{
+				Proxied: http.DefaultTransport,
+			}
+			req := httptest.NewRequest(http.MethodPost, "http://example.com/foo", bytes.NewBufferString("test"))
+
+			res, err := st.RoundTrip(req)
+			defer func() {
+				err = res.Body.Close()
+			}()
+
+			if (err != nil) != tt.wantErr {
+				t.Errorf("CompressionTripper.RoundTrip() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
 		})
 	}
 }
